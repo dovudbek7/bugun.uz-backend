@@ -11,3 +11,5 @@ staticfiles/
 htmlcov/
 celerybeat-schedule
 venv/
+venv/
+./venv

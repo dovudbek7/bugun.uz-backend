@@ -12,20 +12,21 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 
 def _wait_for_db(max_attempts=30):
-    """Wait until PostgreSQL is ready. Skipped when SQLite is configured."""
-    host = os.environ.get("POSTGRES_HOST")
-    if not host:
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url or "sqlite" in database_url:
         logging.info("SQLite mode — skipping DB wait.")
         return
 
+    import urllib.parse
     import psycopg2
 
+    u = urllib.parse.urlparse(database_url)
     params = {
-        "dbname": os.environ.get("POSTGRES_DB", "bugun"),
-        "user": os.environ.get("POSTGRES_USER", "bugun"),
-        "password": os.environ.get("POSTGRES_PASSWORD", "bugun"),
-        "host": host,
-        "port": os.environ.get("POSTGRES_PORT", "5432"),
+        "dbname": u.path[1:],
+        "user": u.username,
+        "password": u.password,
+        "host": u.hostname,
+        "port": u.port or 5432,
     }
     for attempt in range(1, max_attempts + 1):
         try:
