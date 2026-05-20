@@ -1,3 +1,8 @@
+import hashlib
+import hmac
+import urllib.parse
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -41,6 +46,61 @@ class TelegramLoginSerializer(serializers.Serializer):
         return {
             "access": str(refresh.access_token),
             "refresh": str(refresh),
+            "user": {
+                "id": user.id,
+                "full_name": user.full_name,
+                "is_organizer": user.is_organizer,
+            },
+        }
+
+
+class TelegramWebAppLoginSerializer(serializers.Serializer):
+    init_data = serializers.CharField()
+
+    def validate_init_data(self, value):
+        parsed = dict(urllib.parse.parse_qsl(value, strict_parsing=True))
+        received_hash = parsed.pop("hash", None)
+        if not received_hash:
+            raise serializers.ValidationError("hash missing")
+
+        data_check = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
+        secret_key = hmac.new(b"WebAppData", settings.BOT_TOKEN.encode(), hashlib.sha256).digest()
+        expected_hash = hmac.new(secret_key, data_check.encode(), hashlib.sha256).hexdigest()
+
+        if not hmac.compare_digest(expected_hash, received_hash):
+            raise serializers.ValidationError("invalid hash")
+
+        return parsed
+
+    def create(self, validated_data):
+        parsed = validated_data["init_data"]
+        import json
+        tg_user = json.loads(parsed.get("user", "{}"))
+        tg_id = tg_user.get("id")
+        if not tg_id:
+            raise serializers.ValidationError("user id missing")
+
+        username = tg_user.get("username", "")
+        full_name = " ".join(filter(None, [tg_user.get("first_name", ""), tg_user.get("last_name", "")])) or username
+
+        user, created = User.objects.get_or_create(
+            telegram_id=tg_id,
+            defaults={
+                "username": f"tg_{tg_id}",
+                "telegram_username": username,
+                "full_name": full_name,
+            },
+        )
+        if not created and username and user.telegram_username != username:
+            user.telegram_username = username
+            user.save(update_fields=["telegram_username", "updated_at"])
+
+        refresh = RefreshToken.for_user(user)
+        needs_onboarding = not bool(user.phone_number)
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "needs_onboarding": needs_onboarding,
             "user": {
                 "id": user.id,
                 "full_name": user.full_name,

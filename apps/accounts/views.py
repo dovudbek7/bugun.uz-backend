@@ -13,6 +13,7 @@ from .serializers import (
     ProfileSerializer,
     ProfileUpdateSerializer,
     TelegramLoginSerializer,
+    TelegramWebAppLoginSerializer,
 )
 
 
@@ -21,6 +22,16 @@ User = get_user_model()
 
 class TelegramLoginView(GenericAPIView):
     serializer_class = TelegramLoginSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.save())
+
+
+class TelegramWebAppLoginView(GenericAPIView):
+    serializer_class = TelegramWebAppLoginSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):

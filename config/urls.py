@@ -6,7 +6,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.accounts.views import HistoryView, ProfileViewSet, TelegramLoginView, OnboardingView
+from apps.accounts.views import HistoryView, ProfileViewSet, TelegramLoginView, TelegramWebAppLoginView, OnboardingView
 from apps.achievements.views import MyAchievementsView
 from apps.categories.views import CategoryViewSet
 from apps.events.views import EventViewSet, MapEventsView
@@ -32,6 +32,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("dashboard/", include("apps.dashboard.urls")),
     path("api/auth/telegram/", TelegramLoginView.as_view(), name="telegram-login"),
+    path("api/auth/telegram-webapp/", TelegramWebAppLoginView.as_view(), name="telegram-webapp-login"),
     path("api/auth/onboarding/", OnboardingView.as_view(), name="onboarding"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/organizer/request/", OrganizerRequestView.as_view(), name="organizer-request"),
