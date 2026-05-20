@@ -146,8 +146,8 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
 }
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8980123227:AAGkb2zjBGBiUCd9jzVQAKDVzVk9J8InGR8")
-MINI_APP_URL = os.environ.get("MINI_APP_URL", "https://t.me")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 CELERY_BEAT_SCHEDULE = {
