@@ -88,6 +88,8 @@ if _DATABASE_URL:
             "PASSWORD": _url.password,
             "HOST": _url.hostname,
             "PORT": _url.port or 5432,
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
         }
     }
 else:
