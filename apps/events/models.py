@@ -18,6 +18,7 @@ class Event(models.Model):
     location = models.ForeignKey("locations.Location", on_delete=models.PROTECT, related_name="events")
     title = models.CharField(max_length=180)
     description = models.TextField()
+    image = models.ImageField(upload_to="events/", blank=True, null=True)
     event_date = models.DateField()
     event_time = models.TimeField()
     total_seats = models.PositiveIntegerField()

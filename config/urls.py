@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from apps.accounts.views import HistoryView, ProfileViewSet, TelegramLoginView, OnboardingView
 from apps.achievements.views import MyAchievementsView
 from apps.categories.views import CategoryViewSet
-from apps.events.views import EventViewSet
+from apps.events.views import EventViewSet, MapEventsView
 from apps.interests.views import InterestViewSet
 from apps.locations.views import LocationViewSet
 from apps.organizer.views import AdminOrganizerRequestViewSet, OrganizerRequestView
@@ -30,6 +30,7 @@ router.register("profile", ProfileViewSet, basename="profile")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("dashboard/", include("apps.dashboard.urls")),
     path("api/auth/telegram/", TelegramLoginView.as_view(), name="telegram-login"),
     path("api/auth/onboarding/", OnboardingView.as_view(), name="onboarding"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
@@ -37,6 +38,7 @@ urlpatterns = [
     path("api/leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     path("api/achievements/me/", MyAchievementsView.as_view(), name="my-achievements"),
     path("api/history/me/", HistoryView.as_view(), name="my-history"),
+    path("api/maps/", MapEventsView.as_view(), name="maps"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/", include(router.urls)),
@@ -44,3 +46,4 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

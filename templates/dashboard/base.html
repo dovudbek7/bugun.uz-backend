@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} | Community Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    .card { @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6; }
+    .stat-number { @apply text-3xl font-bold text-gray-900; }
+    .stat-label { @apply text-sm text-gray-500 mt-1; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <nav class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-sm">C</span>
+        </div>
+        <span class="font-semibold text-gray-900">Community Platform</span>
+        <span class="text-gray-400">|</span>
+        <span class="text-gray-500 text-sm">Admin Dashboard</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="{% url 'dashboard-statistics' %}" class="text-sm {% if request.resolver_match.url_name == 'dashboard-statistics' %}text-indigo-600 font-medium{% else %}text-gray-600 hover:text-gray-900{% endif %}">Statistics</a>
+        <a href="{% url 'dashboard-reports' %}" class="text-sm {% if request.resolver_match.url_name == 'dashboard-reports' %}text-indigo-600 font-medium{% else %}text-gray-600 hover:text-gray-900{% endif %}">Reports</a>
+        <a href="/admin/" class="text-sm text-gray-600 hover:text-gray-900">Django Admin</a>
+        <a href="/api/docs/" class="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700">API Docs</a>
+      </div>
+    </div>
+  </nav>
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

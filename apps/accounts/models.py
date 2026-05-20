@@ -26,6 +26,8 @@ class User(AbstractUser):
     is_organizer = models.BooleanField(default=False)
     total_attended = models.PositiveIntegerField(default=0)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    last_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    last_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

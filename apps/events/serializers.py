@@ -34,6 +34,7 @@ class EventListSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "image",
             "category",
             "location",
             "event_date",
@@ -65,7 +66,7 @@ class EventDetailSerializer(EventListSerializer):
 class EventWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = ("category", "location", "title", "description", "event_date", "event_time", "total_seats", "is_draft")
+        fields = ("category", "location", "title", "description", "image", "event_date", "event_time", "total_seats", "is_draft")
 
     def validate_total_seats(self, value):
         if value <= 0:
@@ -102,3 +103,24 @@ class WaitingListSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.DictField())
     def get_user(self, obj):
         return {"id": obj.user_id, "full_name": obj.user.full_name}
+
+
+class EventMapSerializer(serializers.ModelSerializer):
+    location = serializers.SerializerMethodField()
+    icon = serializers.CharField(source="category.icon")
+    time = serializers.TimeField(source="event_time")
+    seats_left = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(source="title")
+
+    class Meta:
+        model = Event
+        fields = ("id", "name", "icon", "time", "seats_left", "location")
+
+    @extend_schema_field(serializers.DictField())
+    def get_location(self, obj):
+        loc = obj.location
+        return {
+            "title": loc.title,
+            "latitude": str(loc.latitude),
+            "longitude": str(loc.longitude),
+        }

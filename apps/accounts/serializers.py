@@ -17,6 +17,7 @@ class TelegramLoginSerializer(serializers.Serializer):
     telegram_username = serializers.CharField(required=False, allow_blank=True)
     avatar = serializers.URLField(required=False, allow_blank=True)
     language = serializers.ChoiceField(choices=User.LANGUAGE_CHOICES, default=User.LANGUAGE_UZ_LATN)
+    phone_number = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
         telegram_id = validated_data["telegram_id"]
@@ -25,13 +26,17 @@ class TelegramLoginSerializer(serializers.Serializer):
             "telegram_username": validated_data.get("telegram_username", ""),
             "avatar": validated_data.get("avatar", ""),
             "language": validated_data.get("language", User.LANGUAGE_UZ_LATN),
+            "phone_number": validated_data.get("phone_number", ""),
         }
         user, created = User.objects.get_or_create(telegram_id=telegram_id, defaults=defaults)
         if not created:
-            for field in ("telegram_username", "avatar", "language"):
-                if field in validated_data:
+            update_fields = []
+            for field in ("telegram_username", "avatar", "language", "phone_number"):
+                if field in validated_data and validated_data[field]:
                     setattr(user, field, validated_data[field])
-            user.save(update_fields=["telegram_username", "avatar", "language", "updated_at"])
+                    update_fields.append(field)
+            if update_fields:
+                user.save(update_fields=[*update_fields, "updated_at"])
         refresh = RefreshToken.for_user(user)
         return {
             "access": str(refresh.access_token),

@@ -2,6 +2,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -15,6 +16,7 @@ from .models import Event
 from .serializers import (
     EventDetailSerializer,
     EventListSerializer,
+    EventMapSerializer,
     EventSearchSerializer,
     EventWriteSerializer,
     ParticipantSerializer,
@@ -90,6 +92,11 @@ class EventViewSet(viewsets.ModelViewSet):
             send_event_notification.delay(attendance.user_id, f"Event cancelled: {event.title}.")
         return Response({"message": "Event deleted"})
 
+    @action(detail=False, methods=["get"], url_path="today", permission_classes=[AllowAny])
+    def today(self, request):
+        queryset = self.get_queryset().filter(event_date=timezone.localdate(), status=Event.STATUS_UPCOMING)
+        return Response(EventListSerializer(queryset, many=True).data)
+
     @action(detail=False, methods=["get"], url_path="search", permission_classes=[AllowAny])
     def search(self, request):
         q = request.query_params.get("q", "").strip()
@@ -148,3 +155,16 @@ class EventViewSet(viewsets.ModelViewSet):
         user.save(update_fields=["total_attended", "updated_at"])
         award_joined_achievements(user)
         return Response({"message": "User marked as attended"})
+
+
+class MapEventsView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = EventMapSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return (
+            Event.objects.select_related("category", "location")
+            .filter(status=Event.STATUS_UPCOMING, is_draft=False)
+            .order_by("event_date", "event_time")
+        )

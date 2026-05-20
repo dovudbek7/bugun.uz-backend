@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     "apps.organizer",
     "apps.reports",
     "apps.achievements",
+    "apps.dashboard",
+    "apps.telegram_bot",
 ]
 
 MIDDLEWARE = [
@@ -53,7 +55,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -86,7 +88,6 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
-
 AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -134,6 +135,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8980123227:AAGkb2zjBGBiUCd9jzVQAKDVzVk9J8InGR8")
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "https://t.me")
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 CELERY_BEAT_SCHEDULE = {
