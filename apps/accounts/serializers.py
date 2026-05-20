@@ -1,0 +1,129 @@
+from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.achievements.serializers import AchievementSerializer
+from apps.attendance.models import Attendance
+from apps.interests.models import Interest, UserInterest
+from apps.interests.serializers import InterestSerializer
+
+
+User = get_user_model()
+
+
+class TelegramLoginSerializer(serializers.Serializer):
+    telegram_id = serializers.IntegerField()
+    telegram_username = serializers.CharField(required=False, allow_blank=True)
+    avatar = serializers.URLField(required=False, allow_blank=True)
+    language = serializers.ChoiceField(choices=User.LANGUAGE_CHOICES, default=User.LANGUAGE_UZ_LATN)
+
+    def create(self, validated_data):
+        telegram_id = validated_data["telegram_id"]
+        defaults = {
+            "username": f"tg_{telegram_id}",
+            "telegram_username": validated_data.get("telegram_username", ""),
+            "avatar": validated_data.get("avatar", ""),
+            "language": validated_data.get("language", User.LANGUAGE_UZ_LATN),
+        }
+        user, created = User.objects.get_or_create(telegram_id=telegram_id, defaults=defaults)
+        if not created:
+            for field in ("telegram_username", "avatar", "language"):
+                if field in validated_data:
+                    setattr(user, field, validated_data[field])
+            user.save(update_fields=["telegram_username", "avatar", "language", "updated_at"])
+        refresh = RefreshToken.for_user(user)
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": user.id,
+                "full_name": user.full_name,
+                "is_organizer": user.is_organizer,
+            },
+        }
+
+
+class OnboardingSerializer(serializers.ModelSerializer):
+    interests = serializers.PrimaryKeyRelatedField(queryset=Interest.objects.all(), many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = ("full_name", "age", "region", "phone_number", "show_telegram", "interests")
+
+    def update(self, instance, validated_data):
+        interests = validated_data.pop("interests", None)
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        if interests is not None:
+            UserInterest.objects.filter(user=instance).delete()
+            UserInterest.objects.bulk_create([UserInterest(user=instance, interest=interest) for interest in interests])
+        return instance
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    interests = serializers.SerializerMethodField()
+    achievements = serializers.SerializerMethodField()
+    history = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "full_name",
+            "telegram_username",
+            "avatar",
+            "age",
+            "region",
+            "phone_number",
+            "language",
+            "show_telegram",
+            "is_organizer",
+            "total_attended",
+            "rating",
+            "interests",
+            "achievements",
+            "history",
+        )
+        read_only_fields = ("is_organizer", "total_attended", "rating")
+
+    @extend_schema_field(InterestSerializer(many=True))
+    def get_interests(self, obj):
+        interests = Interest.objects.filter(user_interests__user=obj)
+        return InterestSerializer(interests, many=True).data
+
+    @extend_schema_field(AchievementSerializer(many=True))
+    def get_achievements(self, obj):
+        achievements = [ua.achievement for ua in obj.user_achievements.select_related("achievement").all()]
+        return AchievementSerializer(achievements, many=True).data
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_history(self, obj):
+        attendances = (
+            Attendance.objects.filter(user=obj)
+            .select_related("event")
+            .order_by("-event__event_date", "-event__event_time")[:20]
+        )
+        return [
+            {"event": {"id": item.event_id, "title": item.event.title}, "status": item.status, "date": item.event.event_date}
+            for item in attendances
+        ]
+
+
+class ProfileUpdateSerializer(OnboardingSerializer):
+    class Meta(OnboardingSerializer.Meta):
+        fields = ("full_name", "age", "region", "phone_number", "show_telegram", "language", "interests")
+
+
+class HistorySerializer(serializers.ModelSerializer):
+    event = serializers.SerializerMethodField()
+    date = serializers.DateField(source="event.event_date")
+
+    class Meta:
+        model = Attendance
+        fields = ("event", "status", "date")
+
+    @extend_schema_field(serializers.DictField())
+    def get_event(self, obj):
+        return {"id": obj.event_id, "title": obj.event.title}
