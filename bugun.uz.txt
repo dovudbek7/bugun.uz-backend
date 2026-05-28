@@ -1,0 +1,112 @@
+GETS: {
+    maps: {
+        name;
+        location: {
+            title
+            lang;
+            lat;
+        }
+        icon;
+        time;
+        seats-left; // qancha joy qolganligi eventda qancha odam yozilgan bolsa oshandan auto ayirib qolgan orindiglarni chiqazish berishi kerak
+    }
+    //for location
+    
+
+    event: {
+        title;
+        Location: {from location}
+        time;
+        seats-left;
+        partisipants: [only icons(image of the users if there is no image then first letter of the its name)]
+        tag: quich: bool;
+    } // Event page
+
+    // same as Event but this will take for today 
+    // eventlar bilan bir xil boladi lekin bunda faqat bugun bo'ladigan eventlarni sort qilib chiqazib qoyishligi kerak birinchi oynada birinchida userlarga taqdim etishlik uchun
+    sooon: {
+        title;
+        Location: {from location}
+        time;
+        seats-left;
+        partisipants: [only icons]
+        tag: quich: bool;
+    }
+
+    // ratingdagi topdagilar
+    leaderBoard:{
+        icon; // image of the user 
+        name;
+        total_attands;
+        rating; + nechta rate bosilgani ham
+    }
+
+    profile: {
+        name;
+        image;
+        age;
+        Region; // select (Optional)
+        telegramUsername / telegramId; 
+        language;
+        phone_number
+        showTelegramUsername: bool; // agar true bolsa qolgan foydalanuvchilar kirib bularni profilida telegramiga yoza oladi ham useri ham idsi orqali
+        total_attands;
+        rating;
+        interests selected by user itself = [{},{}]; // as much as user wants ( interests will be initiolized in admin panel )
+        isOrgonizer: bool;
+        user_history: [
+            {
+                icon; // icon of attended matches 
+                title; // attend games title
+                date;
+                total_attanded_people
+
+
+                isOrgonized: bool; // agar false bolsa tepadagi fieldlarni ozi keladi true bolsa past
+                total_attands: // ogronize qilgan eventida qancha odam qatnashgi (agar orgonizer bolsa)
+                isDraft: bool; // orgonizer uchun
+            }
+        ]
+    }
+
+    // queryParameter: // category/1 category/2....
+    category: {
+        name;
+        icon;
+    }
+    }
+
+
+
+
+POSTS:
+{
+    // Only for orgonizers
+    create_event: {
+        type: chess, mafia, boeard games...; // select one item. typeni ichida title hamda icon
+        date and time;
+        location: [same as first location];
+        attendance_count or total_attendance;
+        description;
+        isDraft: bool; // draft or publish
+    }
+
+    login ikki bosqichdan iborat 1chisi telegram botda ikkinchisi telegram miniappda
+
+    telgram botda: {
+        telegram user id;
+        avatar; // if there is avatar
+        language; // select option uz / kiril / eng / ru 
+        share phone number;
+    }
+
+    mini appda{
+        name;
+        age;
+        region;
+        interests; // select
+    }
+}
+
+
+Tillar uz / kiril / eng / ru 

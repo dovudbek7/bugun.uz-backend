@@ -13,11 +13,12 @@ def env_bool(name, default=False):
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 DEBUG = env_bool("DEBUG", True)
+APPEND_SLASH = False
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS",
-    "https://f75b-213-230-112-198.ngrok-free.app,https://bugunuz.fly.dev"
+    "http://127.0.0.1:8000/",
 ).split(",")
 INSTALLED_APPS = [
     "django.contrib.admin",
