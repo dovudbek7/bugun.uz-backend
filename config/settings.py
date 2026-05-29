@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
     "django_filters",
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -136,7 +138,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "60"))),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=int(os.environ.get("JWT_ACCESS_DAYS", "7"))),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.environ.get("JWT_REFRESH_DAYS", "14"))),
     "ROTATE_REFRESH_TOKENS": True,
 }
@@ -146,6 +148,16 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Backend API for community events, attendance, ratings, reports, and organizers.",
     "VERSION": "1.0.0",
 }
+
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    "CORS_ALLOWED_ORIGINS",
+    "https://bugunuz.vercel.app",
+).split(",")
+
+CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+]
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
