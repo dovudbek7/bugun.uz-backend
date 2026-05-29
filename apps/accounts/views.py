@@ -1,9 +1,11 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.attendance.models import Attendance
 
@@ -71,6 +73,29 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         if request.user.id != user.id:
             data.pop("phone_number", None)
         return Response(data)
+
+
+class DevLoginView(GenericAPIView):
+    """DEBUG-only: returns JWT tokens for any mock user — never enabled in production."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if not settings.DEBUG:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        user_id = request.query_params.get("user_id", 1)
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            user = User.objects.filter(full_name__isnull=False).exclude(full_name="").first()
+            if not user:
+                return Response({"detail": "No mock users found. Run: manage.py generate_mock"}, status=400)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user_id": user.id,
+            "full_name": user.full_name,
+        })
 
 
 class HistoryView(ListAPIView):
