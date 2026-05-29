@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.attendance.models import Attendance, WaitingList
@@ -55,8 +55,6 @@ class EventViewSet(viewsets.ModelViewSet):
         return EventListSerializer
 
     def get_permissions(self):
-        if self.action == "search":
-            return [AllowAny()]
         if self.action in {"list", "retrieve"}:
             return [IsAuthenticated()]
         if self.action in {"create"}:
@@ -99,7 +97,17 @@ class EventViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset().filter(event_date=timezone.localdate(), status=Event.STATUS_UPCOMING)
         return Response(EventListSerializer(queryset, many=True).data)
 
-    @action(detail=False, methods=["get"], url_path="search", permission_classes=[AllowAny])
+    @action(detail=True, methods=["get"], url_path="join-status", permission_classes=[IsAuthenticated])
+    def join_status(self, request, pk=None):
+        event = self.get_object()
+        user_id = request.query_params.get("user_id", request.user.id)
+        attendance = Attendance.objects.filter(event=event, user_id=user_id).first()
+        if attendance:
+            return Response({"status": attendance.status})
+        in_waiting = WaitingList.objects.filter(event=event, user_id=user_id).exists()
+        return Response({"status": "waiting" if in_waiting else "not_joined"})
+
+    @action(detail=False, methods=["get"], url_path="search", permission_classes=[IsAuthenticated])
     def search(self, request):
         q = request.query_params.get("q", "").strip()
         queryset = self.get_queryset()
