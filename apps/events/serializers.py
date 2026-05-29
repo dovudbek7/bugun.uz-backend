@@ -53,7 +53,7 @@ class EventListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField())
     def get_organizer(self, obj):
-        return {"id": obj.organizer_id, "full_name": obj.organizer.full_name}
+        return {"id": obj.organizer_id, "full_name": obj.organizer.full_name, "avatar": obj.organizer.avatar}
 
 
 class EventDetailSerializer(EventListSerializer):

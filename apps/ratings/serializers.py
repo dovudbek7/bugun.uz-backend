@@ -45,14 +45,9 @@ class RatingSerializer(serializers.ModelSerializer):
         return rating
 
 
-class LeaderboardUserSerializer(serializers.ModelSerializer):
+class LeaderboardSerializer(serializers.ModelSerializer):
+    score = serializers.IntegerField(source="total_attended")
+
     class Meta:
         model = User
-        fields = ("id", "full_name", "avatar")
-
-
-class LeaderboardSerializer(serializers.Serializer):
-    user = LeaderboardUserSerializer(source="*")
-    total_attended = serializers.IntegerField()
-    rating = serializers.DecimalField(max_digits=3, decimal_places=2)
-    rates_count = serializers.IntegerField()
+        fields = ("id", "full_name", "avatar", "score")

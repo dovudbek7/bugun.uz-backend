@@ -4,13 +4,13 @@ from .models import Category
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    title = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ("id", "title", "title_ru", "title_en", "icon", "color")
+        fields = ("id", "name", "title_ru", "title_en", "icon", "color")
 
-    def get_title(self, obj):
+    def get_name(self, obj):
         request = self.context.get("request")
         lang = "uz_latn"
         if request:

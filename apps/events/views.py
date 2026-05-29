@@ -55,8 +55,10 @@ class EventViewSet(viewsets.ModelViewSet):
         return EventListSerializer
 
     def get_permissions(self):
-        if self.action in {"list", "retrieve", "search"}:
+        if self.action == "search":
             return [AllowAny()]
+        if self.action in {"list", "retrieve"}:
+            return [IsAuthenticated()]
         if self.action in {"create"}:
             return [IsAuthenticated(), IsOrganizer()]
         if self.action in {"update", "partial_update", "destroy"}:
@@ -92,7 +94,7 @@ class EventViewSet(viewsets.ModelViewSet):
             send_event_notification.delay(attendance.user_id, f"Event cancelled: {event.title}.")
         return Response({"message": "Event deleted"})
 
-    @action(detail=False, methods=["get"], url_path="today", permission_classes=[AllowAny])
+    @action(detail=False, methods=["get"], url_path="today", permission_classes=[IsAuthenticated])
     def today(self, request):
         queryset = self.get_queryset().filter(event_date=timezone.localdate(), status=Event.STATUS_UPCOMING)
         return Response(EventListSerializer(queryset, many=True).data)
@@ -158,7 +160,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
 
 class MapEventsView(ListAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     serializer_class = EventMapSerializer
     pagination_class = None
 
