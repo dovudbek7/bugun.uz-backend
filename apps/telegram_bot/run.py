@@ -54,7 +54,7 @@ from aiogram.fsm.storage.memory import MemoryStorage  # noqa: E402
 from aiogram.types import BotCommand  # noqa: E402
 from django.conf import settings  # noqa: E402
 
-from apps.telegram_bot.handlers import games, help, location, profile, referral, start  # noqa: E402
+from apps.telegram_bot.handlers import games, help, location, profile, referral, reminders, start  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,6 +71,7 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
 
     dp.include_router(start.router)
+    dp.include_router(reminders.router)
     dp.include_router(profile.router)
     dp.include_router(games.router)
     dp.include_router(location.router)

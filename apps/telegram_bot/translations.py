@@ -134,6 +134,15 @@ TEXTS = {
         ),
         "referral_joined": "🎉 <b>{name}</b> siz orqali platformaga qo'shildi!\n👥 Jami referallar: <b>{count}</b>",
         "open_event": "📱 Eventni ko'rish",
+        "remind_me": "⏰ 30 daqiqa oldin eslatib tur",
+        "reminder_set": "✅ Eslatma qo'yildi!",
+        "reminder_too_late": "⚠️ Eventga 30 daqiqadan kam qoldi.",
+        "event_reminder": (
+            "⏰ <b>{title}</b> tez orada boshlanadi!\n\n"
+            "🕐 Vaqt: {time}\n"
+            "📍 Joy: {location}\n"
+            "📌 Manzil: {address}"
+        ),
     },
     "ru": {
         "choose_language": "🌐 Выберите язык:",
@@ -214,6 +223,15 @@ TEXTS = {
         ),
         "referral_joined": "🎉 <b>{name}</b> присоединился по вашей реферальной ссылке!\n👥 Всего рефералов: <b>{count}</b>",
         "open_event": "📱 Открыть мероприятие",
+        "remind_me": "⏰ Напомнить за 30 минут",
+        "reminder_set": "✅ Напоминание установлено!",
+        "reminder_too_late": "⚠️ До мероприятия меньше 30 минут.",
+        "event_reminder": (
+            "⏰ <b>{title}</b> скоро начнётся!\n\n"
+            "🕐 Время: {time}\n"
+            "📍 Место: {location}\n"
+            "📌 Адрес: {address}"
+        ),
     },
     "en": {
         "choose_language": "🌐 Choose your language:",
@@ -294,6 +312,15 @@ TEXTS = {
         ),
         "referral_joined": "🎉 <b>{name}</b> joined via your referral link!\n👥 Total referrals: <b>{count}</b>",
         "open_event": "📱 View Event",
+        "remind_me": "⏰ Remind me 30 min before",
+        "reminder_set": "✅ Reminder set!",
+        "reminder_too_late": "⚠️ Less than 30 minutes until the event.",
+        "event_reminder": (
+            "⏰ <b>{title}</b> is starting soon!\n\n"
+            "🕐 Time: {time}\n"
+            "📍 Venue: {location}\n"
+            "📌 Address: {address}"
+        ),
     },
 }
 

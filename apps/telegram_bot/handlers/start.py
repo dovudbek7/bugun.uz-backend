@@ -125,6 +125,22 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         tg.full_name or "",
     )
 
+    if command.args and command.args.startswith("event_"):
+        event_id = command.args.replace("event_", "")
+        lang = user.language or "uz_latn"
+        mini_app_url = getattr(settings, "MINI_APP_URL", "").rstrip("/")
+        if mini_app_url:
+            kb = InlineKeyboardMarkup(
+                inline_keyboard=[[
+                    InlineKeyboardButton(
+                        text=t("open_event", lang),
+                        web_app=WebAppInfo(url=f"{mini_app_url}/activity/{event_id}"),
+                    )
+                ]]
+            )
+            await message.answer(t("open_event", lang), reply_markup=kb)
+        return
+
     ref_code = None
     if command.args and command.args.startswith("ref_"):
         ref_code = command.args[4:]

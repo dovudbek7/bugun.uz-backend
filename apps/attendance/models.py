@@ -41,3 +41,17 @@ class WaitingList(models.Model):
 
     def __str__(self):
         return f"{self.user_id}:{self.event_id}"
+
+
+class EventReminder(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="event_reminders")
+    event = models.ForeignKey("events.Event", on_delete=models.CASCADE, related_name="reminders")
+    remind_at = models.DateTimeField()
+    sent = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("user", "event")
+        indexes = [models.Index(fields=["remind_at", "sent"])]
+
+    def __str__(self):
+        return f"{self.user_id}:{self.event_id}@{self.remind_at}"

@@ -112,6 +112,18 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"status": attendance.status})
         return Response({"status": "not_joined"})
 
+    @action(detail=False, methods=["get"], url_path="by-deep-link", permission_classes=[IsAuthenticated])
+    def by_deep_link(self, request):
+        ref = request.query_params.get("ref", "")
+        if not ref.startswith("event_"):
+            return Response({"detail": "invalid ref"}, status=status.HTTP_400_BAD_REQUEST)
+        event_id = ref.replace("event_", "")
+        try:
+            event = Event.objects.select_related("category", "location", "organizer").prefetch_related("attendances__user").get(pk=event_id, is_draft=False)
+        except Event.DoesNotExist:
+            return Response({"detail": "not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(EventDetailSerializer(event).data)
+
     @action(detail=False, methods=["get"], url_path="search", permission_classes=[IsAuthenticated])
     def search(self, request):
         q = request.query_params.get("q", "").strip()

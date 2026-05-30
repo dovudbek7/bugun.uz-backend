@@ -50,15 +50,22 @@ def send_attendance_notification(user_id, event_id, notification_type):
     }
     text = t(f"event_{notification_type}", lang).format(**kwargs)
 
-    # Add "Open Event" button for non-cancelled notifications
     reply_markup = None
     mini_app_url = getattr(django_settings, "MINI_APP_URL", "").rstrip("/")
-    if mini_app_url and notification_type != "cancelled":
-        reply_markup = {
-            "inline_keyboard": [[
-                {"text": t("open_event", lang), "web_app": {"url": f"{mini_app_url}/activity/{event_id}"}}
-            ]]
-        }
+    if mini_app_url and notification_type not in ("cancelled", "waiting"):
+        if notification_type == "joined":
+            reply_markup = {
+                "inline_keyboard": [[
+                    {"text": t("open_event", lang), "web_app": {"url": f"{mini_app_url}/activity/{event_id}"}},
+                    {"text": t("remind_me", lang), "callback_data": f"remind:{event_id}"},
+                ]]
+            }
+        else:
+            reply_markup = {
+                "inline_keyboard": [[
+                    {"text": t("open_event", lang), "web_app": {"url": f"{mini_app_url}/activity/{event_id}"}}
+                ]]
+            }
 
     send_telegram_message(user.telegram_id, text, reply_markup=reply_markup)
 
@@ -98,8 +105,26 @@ def send_event_reminders():
         if now <= event.starts_at <= until:
             attendances = Attendance.objects.filter(event=event, status=Attendance.STATUS_JOINED).select_related("user")
             for attendance in attendances:
-                send_event_notification.delay(attendance.user_id, f"Reminder: {event.title} starts on {event.event_date} at {event.event_time}.")
+                send_attendance_notification.delay(attendance.user_id, event.pk, "reminder")
                 sent += 1
             event.reminder_sent = True
             event.save(update_fields=["reminder_sent", "updated_at"])
+    return sent
+
+
+@shared_task
+def send_scheduled_reminders():
+    from apps.attendance.models import EventReminder
+    now = timezone.localtime()
+    reminders = (
+        EventReminder.objects
+        .filter(remind_at__lte=now, sent=False)
+        .select_related("user", "event")
+    )
+    sent = 0
+    for reminder in reminders:
+        send_attendance_notification.delay(reminder.user_id, reminder.event_id, "reminder")
+        reminder.sent = True
+        reminder.save(update_fields=["sent"])
+        sent += 1
     return sent
