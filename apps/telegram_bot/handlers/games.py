@@ -40,10 +40,14 @@ def _get_user_games(telegram_id):
     return user, user.language or "uz_latn", upcoming, []
 
 
+def _valid_webapp_url(url: str) -> bool:
+    return url.startswith("https://") and "t.me" not in url
+
+
 def _event_keyboard(events, lang):
     """Inline keyboard: one button per upcoming event → opens webapp detail page."""
     mini_app_url = getattr(settings, "MINI_APP_URL", "").rstrip("/")
-    if not mini_app_url:
+    if not mini_app_url or not _valid_webapp_url(mini_app_url):
         return None
     rows = []
     for event_id, title, date_str, time_str in events[:5]:
