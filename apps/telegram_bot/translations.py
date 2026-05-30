@@ -115,7 +115,11 @@ TEXTS = {
             "📍 Joy: {location}\n\n"
             "Bo'sh joy chiqsa avtomatik qo'shilasiz."
         ),
-        "event_cancelled_notif": "❌ Siz <b>{title}</b> eventidan chiqib ketdingiz.",
+        "event_cancelled_notif": (
+            "❌ Siz <b>{title}</b> eventidan chiqib ketdingiz.\n\n"
+            "📅 Sana: {date}\n"
+            "🕐 Vaqt: {time}"
+        ),
         "event_promoted": (
             "🎉 Tabriklaymiz! Kutish ro'yxatidan <b>{title}</b> eventiga qo'shildingiz!\n\n"
             "📅 Sana: {date}\n"
@@ -191,7 +195,11 @@ TEXTS = {
             "📍 Место: {location}\n\n"
             "Как только освободится место — вы автоматически попадёте в участники."
         ),
-        "event_cancelled_notif": "❌ Вы отменили участие в <b>{title}</b>.",
+        "event_cancelled_notif": (
+            "❌ Вы отменили участие в <b>{title}</b>.\n\n"
+            "📅 Дата: {date}\n"
+            "🕐 Время: {time}"
+        ),
         "event_promoted": (
             "🎉 Поздравляем! Вы попали в участники <b>{title}</b> из списка ожидания!\n\n"
             "📅 Дата: {date}\n"
@@ -267,7 +275,11 @@ TEXTS = {
             "📍 Venue: {location}\n\n"
             "You'll be automatically added when a spot opens up."
         ),
-        "event_cancelled_notif": "❌ You cancelled your spot at <b>{title}</b>.",
+        "event_cancelled_notif": (
+            "❌ You cancelled your spot at <b>{title}</b>.\n\n"
+            "📅 Date: {date}\n"
+            "🕐 Time: {time}"
+        ),
         "event_promoted": (
             "🎉 Great news! You've moved from the waiting list into <b>{title}</b>!\n\n"
             "📅 Date: {date}\n"
