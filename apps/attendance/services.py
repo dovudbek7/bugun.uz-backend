@@ -1,3 +1,5 @@
+import threading
+
 from django.db import transaction
 from rest_framework import serializers
 
@@ -5,6 +7,16 @@ from apps.events.models import Event
 from apps.events.tasks import send_attendance_notification
 
 from .models import Attendance, WaitingList
+
+
+def _notify(user_id, event_id, notification_type):
+    """Run attendance notification in background thread (no Celery needed)."""
+    def _run():
+        try:
+            send_attendance_notification(user_id, event_id, notification_type)
+        except Exception:
+            pass
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def ensure_joinable(event):
@@ -31,11 +43,13 @@ def join_event(user, event):
             existing.save(update_fields=["status"])
         else:
             Attendance.objects.create(user=user, event=event, status=Attendance.STATUS_JOINED)
-        transaction.on_commit(lambda: send_attendance_notification.delay(user.id, event.pk, "joined"))
+        uid, eid = user.id, event.pk
+        transaction.on_commit(lambda: _notify(uid, eid, "joined"))
         return "Joined successfully"
 
     WaitingList.objects.create(user=user, event=event)
-    transaction.on_commit(lambda: send_attendance_notification.delay(user.id, event.pk, "waiting"))
+    uid, eid = user.id, event.pk
+    transaction.on_commit(lambda: _notify(uid, eid, "waiting"))
     return "Added to waiting list"
 
 
@@ -51,7 +65,8 @@ def leave_event(user, event):
         if not deleted:
             raise serializers.ValidationError("You have not joined this event.")
 
-    transaction.on_commit(lambda: send_attendance_notification.delay(user.id, event.pk, "cancelled"))
+    uid, eid = user.id, event.pk
+    transaction.on_commit(lambda: _notify(uid, eid, "cancelled"))
     promote_next_waiting_user(event)
     return "Left successfully"
 
@@ -65,5 +80,5 @@ def promote_next_waiting_user(event):
     attendance.status = Attendance.STATUS_JOINED
     attendance.save(update_fields=["status"])
     next_waiting.delete()
-    send_attendance_notification.delay(next_waiting.user_id, event.pk, "promoted")
+    _notify(next_waiting.user_id, event.pk, "promoted")
     return attendance
