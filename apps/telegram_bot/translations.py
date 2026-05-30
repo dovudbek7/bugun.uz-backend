@@ -115,7 +115,7 @@ TEXTS = {
             "📍 Joy: {location}\n\n"
             "Bo'sh joy chiqsa avtomatik qo'shilasiz."
         ),
-        "event_cancelled_notif": (
+        "event_cancelled": (
             "❌ Siz <b>{title}</b> eventidan chiqib ketdingiz.\n\n"
             "📅 Sana: {date}\n"
             "🕐 Vaqt: {time}"
@@ -195,7 +195,7 @@ TEXTS = {
             "📍 Место: {location}\n\n"
             "Как только освободится место — вы автоматически попадёте в участники."
         ),
-        "event_cancelled_notif": (
+        "event_cancelled": (
             "❌ Вы отменили участие в <b>{title}</b>.\n\n"
             "📅 Дата: {date}\n"
             "🕐 Время: {time}"
@@ -275,7 +275,7 @@ TEXTS = {
             "📍 Venue: {location}\n\n"
             "You'll be automatically added when a spot opens up."
         ),
-        "event_cancelled_notif": (
+        "event_cancelled": (
             "❌ You cancelled your spot at <b>{title}</b>.\n\n"
             "📅 Date: {date}\n"
             "🕐 Time: {time}"
