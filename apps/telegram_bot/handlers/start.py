@@ -133,6 +133,9 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         lang = user.language or "uz_latn"
         name = user.full_name or tg.full_name or tg.username or "friend"
         await message.answer(t("welcome_back", lang).format(name=name))
+        mini_app_kb = _mini_app_keyboard(lang)
+        if mini_app_kb:
+            await message.answer(t("open_app", lang), reply_markup=mini_app_kb)
         return
 
     # Store referral code for use after registration completes

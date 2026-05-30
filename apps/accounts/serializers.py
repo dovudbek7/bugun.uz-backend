@@ -54,23 +54,24 @@ class TelegramLoginSerializer(serializers.Serializer):
         }
 
 
+def _validate_telegram_init_data(value: str) -> dict:
+    parsed = dict(urllib.parse.parse_qsl(value, strict_parsing=True))
+    received_hash = parsed.pop("hash", None)
+    if not received_hash:
+        raise serializers.ValidationError("hash missing")
+    data_check = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
+    secret_key = hmac.new(b"WebAppData", settings.BOT_TOKEN.encode(), hashlib.sha256).digest()
+    expected_hash = hmac.new(secret_key, data_check.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected_hash, received_hash):
+        raise serializers.ValidationError("invalid hash")
+    return parsed
+
+
 class TelegramWebAppLoginSerializer(serializers.Serializer):
     init_data = serializers.CharField()
 
     def validate_init_data(self, value):
-        parsed = dict(urllib.parse.parse_qsl(value, strict_parsing=True))
-        received_hash = parsed.pop("hash", None)
-        if not received_hash:
-            raise serializers.ValidationError("hash missing")
-
-        data_check = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
-        secret_key = hmac.new(b"WebAppData", settings.BOT_TOKEN.encode(), hashlib.sha256).digest()
-        expected_hash = hmac.new(secret_key, data_check.encode(), hashlib.sha256).hexdigest()
-
-        if not hmac.compare_digest(expected_hash, received_hash):
-            raise serializers.ValidationError("invalid hash")
-
-        return parsed
+        return _validate_telegram_init_data(value)
 
     def create(self, validated_data):
         parsed = validated_data["init_data"]
@@ -95,8 +96,11 @@ class TelegramWebAppLoginSerializer(serializers.Serializer):
             user.telegram_username = username
             user.save(update_fields=["telegram_username", "updated_at"])
 
+        if not user.phone_number:
+            raise serializers.ValidationError({"phone_required": True})
+
         refresh = RefreshToken.for_user(user)
-        needs_onboarding = not bool(user.phone_number)
+        needs_onboarding = not bool(user.full_name and user.age and user.region)
         return {
             "access": str(refresh.access_token),
             "refresh": str(refresh),
@@ -111,6 +115,7 @@ class TelegramWebAppLoginSerializer(serializers.Serializer):
 
 class OnboardingSerializer(serializers.ModelSerializer):
     interests = serializers.PrimaryKeyRelatedField(queryset=Interest.objects.all(), many=True, required=False)
+    phone_number = serializers.CharField(required=True, min_length=7)
 
     class Meta:
         model = User
@@ -125,6 +130,36 @@ class OnboardingSerializer(serializers.ModelSerializer):
             UserInterest.objects.filter(user=instance).delete()
             UserInterest.objects.bulk_create([UserInterest(user=instance, interest=interest) for interest in interests])
         return instance
+
+
+class SubmitPhoneSerializer(serializers.Serializer):
+    init_data = serializers.CharField()
+    phone_number = serializers.CharField(min_length=7)
+
+    def validate_init_data(self, value):
+        return _validate_telegram_init_data(value)
+
+    def create(self, validated_data):
+        import json
+        parsed = validated_data["init_data"]
+        phone_number = validated_data["phone_number"]
+        tg_user = json.loads(parsed.get("user", "{}"))
+        tg_id = tg_user.get("id")
+        if not tg_id:
+            raise serializers.ValidationError("user id missing")
+        user = User.objects.filter(telegram_id=tg_id).first()
+        if not user:
+            raise serializers.ValidationError("user not found")
+        user.phone_number = phone_number
+        user.save(update_fields=["phone_number", "updated_at"])
+        refresh = RefreshToken.for_user(user)
+        needs_onboarding = not bool(user.full_name and user.age and user.region)
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "needs_onboarding": needs_onboarding,
+            "user": {"id": user.id, "full_name": user.full_name, "is_organizer": user.is_organizer},
+        }
 
 
 class ProfileSerializer(serializers.ModelSerializer):
