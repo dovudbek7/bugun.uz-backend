@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.attendance.models import Attendance
-from apps.common.telegram import send_telegram_message
+from apps.common.telegram import send_telegram_message, send_telegram_venue
 
 from .models import Event
 
@@ -17,6 +17,59 @@ def send_event_notification(user_id, text):
     user = get_user_model().objects.filter(id=user_id).first()
     if user:
         send_telegram_message(user.telegram_id, text)
+
+
+@shared_task
+def send_attendance_notification(user_id, event_id, notification_type):
+    """
+    notification_type: joined | waiting | cancelled | promoted
+    Sends translated text + venue (for joined/promoted).
+    """
+    import html as html_module
+    from django.conf import settings as django_settings
+    from django.contrib.auth import get_user_model
+    from apps.telegram_bot.translations import t
+
+    User = get_user_model()
+    user = User.objects.filter(id=user_id).first()
+    if not user or not user.telegram_id:
+        return
+
+    event = Event.objects.select_related("location").filter(id=event_id).first()
+    if not event:
+        return
+
+    lang = user.language or "uz_latn"
+    loc = event.location
+    kwargs = {
+        "title": html_module.escape(event.title),
+        "date": event.event_date.strftime("%d.%m.%Y"),
+        "time": event.event_time.strftime("%H:%M"),
+        "location": html_module.escape(loc.title),
+        "address": html_module.escape(loc.address),
+    }
+    text = t(f"event_{notification_type}", lang).format(**kwargs)
+
+    # Add "Open Event" button for non-cancelled notifications
+    reply_markup = None
+    mini_app_url = getattr(django_settings, "MINI_APP_URL", "").rstrip("/")
+    if mini_app_url and notification_type != "cancelled":
+        reply_markup = {
+            "inline_keyboard": [[
+                {"text": t("open_event", lang), "web_app": {"url": f"{mini_app_url}/activity/{event_id}"}}
+            ]]
+        }
+
+    send_telegram_message(user.telegram_id, text, reply_markup=reply_markup)
+
+    if notification_type in ("joined", "promoted"):
+        send_telegram_venue(
+            user.telegram_id,
+            float(loc.latitude),
+            float(loc.longitude),
+            loc.title,
+            loc.address,
+        )
 
 
 @shared_task

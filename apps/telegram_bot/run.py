@@ -51,9 +51,10 @@ from aiogram import Bot, Dispatcher  # noqa: E402
 from aiogram.client.default import DefaultBotProperties  # noqa: E402
 from aiogram.enums import ParseMode  # noqa: E402
 from aiogram.fsm.storage.memory import MemoryStorage  # noqa: E402
+from aiogram.types import BotCommand  # noqa: E402
 from django.conf import settings  # noqa: E402
 
-from apps.telegram_bot.handlers import games, help, location, profile, start  # noqa: E402
+from apps.telegram_bot.handlers import games, help, location, profile, referral, start  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,7 +74,17 @@ async def main():
     dp.include_router(profile.router)
     dp.include_router(games.router)
     dp.include_router(location.router)
+    dp.include_router(referral.router)
     dp.include_router(help.router)
+
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Ro'yxatdan o'tish"),
+        BotCommand(command="profile", description="Profil va statistika"),
+        BotCommand(command="events", description="Qo'shilgan eventlar"),
+        BotCommand(command="language", description="Tilni o'zgartirish"),
+        BotCommand(command="referral", description="Referal havola olish"),
+        BotCommand(command="help", description="Yordam"),
+    ])
 
     logging.info("Bot starting polling...")
     await bot.delete_webhook(drop_pending_updates=True)

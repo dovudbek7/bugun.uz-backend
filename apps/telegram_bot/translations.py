@@ -1,3 +1,5 @@
+import re
+
 # ── Uzbek Latin → Cyrillic transliteration ────────────────────────────────────
 
 _MULTI_REPLACEMENTS = [
@@ -31,10 +33,23 @@ _SINGLE_MAP = {
 
 
 def latin_to_cyrillic(text: str) -> str:
-    """Convert Uzbek Latin script to Cyrillic."""
-    for lat, cyr in _MULTI_REPLACEMENTS:
-        text = text.replace(lat, cyr)
-    return "".join(_SINGLE_MAP.get(ch, ch) for ch in text)
+    """Convert Uzbek Latin to Cyrillic.
+    Preserves: {placeholders}, <html tags>, /bot_commands.
+    """
+    parts = re.split(r'(\{[^}]*\}|<[^>]*>|/\w+)', text)
+    result = []
+    for part in parts:
+        if (
+            (part.startswith("{") and part.endswith("}"))
+            or (part.startswith("<") and part.endswith(">"))
+            or part.startswith("/")
+        ):
+            result.append(part)
+        else:
+            for lat, cyr in _MULTI_REPLACEMENTS:
+                part = part.replace(lat, cyr)
+            result.append("".join(_SINGLE_MAP.get(ch, ch) for ch in part))
+    return "".join(result)
 
 
 # ── Texts (uz_latn + ru + en only; uz_cyrl is auto-generated) ─────────────────
@@ -56,7 +71,7 @@ TEXTS = {
         "profile_title": "👤 <b>Profil</b>",
         "name_label": "Ism",
         "rating_label": "Reyting",
-        "total_games_label": "Jami o'yinlar",
+        "total_games_label": "Jami eventlar",
         "organizer_label": "Organizer",
         "region_label": "Viloyat",
         "phone_label": "Telefon",
@@ -64,9 +79,10 @@ TEXTS = {
         "no": "❌ Yo'q",
         "no_rating": "Reyting yo'q",
         "not_registered": "Avval /start bosing",
-        "games_title": "🎮 <b>O'yinlaringiz</b>",
+        "games_title": "📅 <b>Eventlaringiz</b>",
+        "events_title": "📅 <b>Eventlaringiz</b>",
         "upcoming_label": "🟢 <b>Kelayotgan</b>",
-        "completed_label": "✅ <b>Tugatilgan</b>",
+        "completed_label": "✅ <b>Tugallangan</b>",
         "no_games": "Hali hech qanday eventga qo'shilmagansiz.\nEventlarni ko'rish uchun ilovani oching!",
         "location_prompt": "📍 Joylashuvingizni ulashing:",
         "location_button": "📍 Joylashuvni ulashish",
@@ -74,16 +90,46 @@ TEXTS = {
         "help_text": (
             "🤖 <b>Community Events Bot</b>\n\n"
             "Mavjud buyruqlar:\n\n"
-            "/start — Ro'yxatdan o'tish va sozlash\n"
+            "/start — Ro'yxatdan o'tish\n"
             "/profile — Profil va statistika\n"
-            "/games — Qo'shilgan eventlar\n"
-            "/location — Joylashuvni ulashish\n"
+            "/events — Qo'shilgan eventlarim\n"
+            "/language — Tilni o'zgartirish\n"
+            "/referral — Referal havola\n"
             "/help — Yordam\n\n"
             "<b>Nima qilish mumkin:</b>\n"
-            "• Chess, mafia, board games va boshqa offline eventlarga qo'shilish\n"
-            "• O'yin tarixini va reytingni kuzatish\n"
+            "• Chess, mafia, board games va offline eventlarga qo'shilish\n"
+            "• Event tarixini va reytingni kuzatish\n"
             "• Eventlar haqida bildirishnomalar olish"
         ),
+        "event_joined": (
+            "✅ Siz <b>{title}</b> eventiga qo'shildingiz!\n\n"
+            "📅 Sana: {date}\n"
+            "🕐 Vaqt: {time}\n"
+            "📍 Joy: {location}\n"
+            "📌 Manzil: {address}"
+        ),
+        "event_waiting": (
+            "⏳ Siz <b>{title}</b> eventining kutish ro'yxatidasiz.\n\n"
+            "📅 Sana: {date}\n"
+            "🕐 Vaqt: {time}\n"
+            "📍 Joy: {location}\n\n"
+            "Bo'sh joy chiqsa avtomatik qo'shilasiz."
+        ),
+        "event_cancelled_notif": "❌ Siz <b>{title}</b> eventidan chiqib ketdingiz.",
+        "event_promoted": (
+            "🎉 Tabriklaymiz! Kutish ro'yxatidan <b>{title}</b> eventiga qo'shildingiz!\n\n"
+            "📅 Sana: {date}\n"
+            "🕐 Vaqt: {time}\n"
+            "📍 Joy: {location}\n"
+            "📌 Manzil: {address}"
+        ),
+        "referral_link_msg": (
+            "🔗 <b>Sizning referal havolangiz:</b>\n\n"
+            "{link}\n\n"
+            "👥 Siz orqali qo'shilganlar: <b>{count}</b> ta"
+        ),
+        "referral_joined": "🎉 <b>{name}</b> siz orqali platformaga qo'shildi!\n👥 Jami referallar: <b>{count}</b>",
+        "open_event": "📱 Eventni ko'rish",
     },
     "ru": {
         "choose_language": "🌐 Выберите язык:",
@@ -101,7 +147,7 @@ TEXTS = {
         "profile_title": "👤 <b>Профиль</b>",
         "name_label": "Имя",
         "rating_label": "Рейтинг",
-        "total_games_label": "Всего игр",
+        "total_games_label": "Всего мероприятий",
         "organizer_label": "Организатор",
         "region_label": "Регион",
         "phone_label": "Телефон",
@@ -109,26 +155,57 @@ TEXTS = {
         "no": "❌ Нет",
         "no_rating": "Нет рейтинга",
         "not_registered": "Сначала отправьте /start",
-        "games_title": "🎮 <b>Ваши игры</b>",
+        "games_title": "📅 <b>Ваши мероприятия</b>",
+        "events_title": "📅 <b>Ваши мероприятия</b>",
         "upcoming_label": "🟢 <b>Предстоящие</b>",
         "completed_label": "✅ <b>Завершённые</b>",
-        "no_games": "Вы ещё не записались ни на один event.\nОткройте приложение для просмотра событий!",
+        "no_games": "Вы ещё не записались ни на одно мероприятие.\nОткройте приложение для просмотра событий!",
         "location_prompt": "📍 Поделитесь местоположением:",
         "location_button": "📍 Поделиться локацией",
         "location_saved": "✅ Местоположение сохранено!\n\n📍 Lat: {lat:.4f}, Lon: {lon:.4f}",
         "help_text": (
             "🤖 <b>Community Events Bot</b>\n\n"
             "Доступные команды:\n\n"
-            "/start — Регистрация и настройка\n"
+            "/start — Регистрация\n"
             "/profile — Профиль и статистика\n"
-            "/games — Записанные мероприятия\n"
-            "/location — Поделиться локацией\n"
+            "/events — Мои мероприятия\n"
+            "/language — Изменить язык\n"
+            "/referral — Реферальная ссылка\n"
             "/help — Помощь\n\n"
             "<b>Возможности:</b>\n"
             "• Участие в офлайн мероприятиях (шахматы, мафия, настолки, встречи)\n"
-            "• Отслеживание истории игр и рейтинга\n"
+            "• Отслеживание истории и рейтинга\n"
             "• Уведомления о мероприятиях"
         ),
+        "event_joined": (
+            "✅ Вы записались на <b>{title}</b>!\n\n"
+            "📅 Дата: {date}\n"
+            "🕐 Время: {time}\n"
+            "📍 Место: {location}\n"
+            "📌 Адрес: {address}"
+        ),
+        "event_waiting": (
+            "⏳ Вы в списке ожидания для <b>{title}</b>.\n\n"
+            "📅 Дата: {date}\n"
+            "🕐 Время: {time}\n"
+            "📍 Место: {location}\n\n"
+            "Как только освободится место — вы автоматически попадёте в участники."
+        ),
+        "event_cancelled_notif": "❌ Вы отменили участие в <b>{title}</b>.",
+        "event_promoted": (
+            "🎉 Поздравляем! Вы попали в участники <b>{title}</b> из списка ожидания!\n\n"
+            "📅 Дата: {date}\n"
+            "🕐 Время: {time}\n"
+            "📍 Место: {location}\n"
+            "📌 Адрес: {address}"
+        ),
+        "referral_link_msg": (
+            "🔗 <b>Ваша реферальная ссылка:</b>\n\n"
+            "{link}\n\n"
+            "👥 Приглашено через вас: <b>{count}</b>"
+        ),
+        "referral_joined": "🎉 <b>{name}</b> присоединился по вашей реферальной ссылке!\n👥 Всего рефералов: <b>{count}</b>",
+        "open_event": "📱 Открыть мероприятие",
     },
     "en": {
         "choose_language": "🌐 Choose your language:",
@@ -146,7 +223,7 @@ TEXTS = {
         "profile_title": "👤 <b>Profile</b>",
         "name_label": "Name",
         "rating_label": "Rating",
-        "total_games_label": "Total Games",
+        "total_games_label": "Total Events",
         "organizer_label": "Organizer",
         "region_label": "Region",
         "phone_label": "Phone",
@@ -154,7 +231,8 @@ TEXTS = {
         "no": "❌ No",
         "no_rating": "No rating yet",
         "not_registered": "Please send /start first",
-        "games_title": "🎮 <b>Your Games</b>",
+        "games_title": "📅 <b>Your Events</b>",
+        "events_title": "📅 <b>Your Events</b>",
         "upcoming_label": "🟢 <b>Upcoming</b>",
         "completed_label": "✅ <b>Completed</b>",
         "no_games": "You haven't joined any events yet.\nOpen the app to browse events!",
@@ -164,16 +242,46 @@ TEXTS = {
         "help_text": (
             "🤖 <b>Community Events Bot</b>\n\n"
             "Available commands:\n\n"
-            "/start — Register and set up account\n"
-            "/profile — View profile and stats\n"
-            "/games — See your joined events\n"
-            "/location — Share your location\n"
-            "/help — Show this help\n\n"
+            "/start — Register\n"
+            "/profile — Profile and stats\n"
+            "/events — My events\n"
+            "/language — Change language\n"
+            "/referral — Referral link\n"
+            "/help — Help\n\n"
             "<b>What you can do:</b>\n"
             "• Join offline events (chess, mafia, board games, meetups)\n"
-            "• Track game history and rating\n"
+            "• Track event history and rating\n"
             "• Get event notifications"
         ),
+        "event_joined": (
+            "✅ You joined <b>{title}</b>!\n\n"
+            "📅 Date: {date}\n"
+            "🕐 Time: {time}\n"
+            "📍 Venue: {location}\n"
+            "📌 Address: {address}"
+        ),
+        "event_waiting": (
+            "⏳ You're on the waiting list for <b>{title}</b>.\n\n"
+            "📅 Date: {date}\n"
+            "🕐 Time: {time}\n"
+            "📍 Venue: {location}\n\n"
+            "You'll be automatically added when a spot opens up."
+        ),
+        "event_cancelled_notif": "❌ You cancelled your spot at <b>{title}</b>.",
+        "event_promoted": (
+            "🎉 Great news! You've moved from the waiting list into <b>{title}</b>!\n\n"
+            "📅 Date: {date}\n"
+            "🕐 Time: {time}\n"
+            "📍 Venue: {location}\n"
+            "📌 Address: {address}"
+        ),
+        "referral_link_msg": (
+            "🔗 <b>Your referral link:</b>\n\n"
+            "{link}\n\n"
+            "👥 Invited via you: <b>{count}</b>"
+        ),
+        "referral_joined": "🎉 <b>{name}</b> joined via your referral link!\n👥 Total referrals: <b>{count}</b>",
+        "open_event": "📱 View Event",
     },
 }
 

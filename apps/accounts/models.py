@@ -1,5 +1,11 @@
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+
+def _referral_code():
+    return uuid.uuid4().hex[:10]
 
 
 class User(AbstractUser):
@@ -28,6 +34,11 @@ class User(AbstractUser):
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     last_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     last_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    referral_code = models.CharField(max_length=10, unique=True, default=_referral_code)
+    referred_by = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="referrals"
+    )
+    referral_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
