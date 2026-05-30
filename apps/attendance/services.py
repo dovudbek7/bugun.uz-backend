@@ -56,15 +56,17 @@ def join_event(user, event):
 @transaction.atomic
 def leave_event(user, event):
     event = Event.objects.select_for_update().get(pk=event.pk)
-    attendance = Attendance.objects.filter(user=user, event=event).first()
-    if attendance:
-        attendance.status = Attendance.STATUS_CANCELLED
-        attendance.save(update_fields=["status"])
-    else:
-        deleted, _ = WaitingList.objects.filter(user=user, event=event).delete()
-        if not deleted:
-            raise serializers.ValidationError("You have not joined this event.")
 
+    waiting_deleted, _ = WaitingList.objects.filter(user=user, event=event).delete()
+    if waiting_deleted:
+        return "Left waiting list successfully"
+
+    attendance = Attendance.objects.filter(user=user, event=event).exclude(status=Attendance.STATUS_CANCELLED).first()
+    if not attendance:
+        raise serializers.ValidationError("You have not joined this event.")
+
+    attendance.status = Attendance.STATUS_CANCELLED
+    attendance.save(update_fields=["status"])
     uid, eid = user.id, event.pk
     transaction.on_commit(lambda: _notify(uid, eid, "cancelled"))
     promote_next_waiting_user(event)

@@ -104,11 +104,13 @@ class EventViewSet(viewsets.ModelViewSet):
     def join_status(self, request, pk=None):
         event = self.get_object()
         user_id = request.query_params.get("user_id", request.user.id)
-        attendance = Attendance.objects.filter(event=event, user_id=user_id).first()
+        in_waiting = WaitingList.objects.filter(event=event, user_id=user_id).exists()
+        if in_waiting:
+            return Response({"status": "waiting"})
+        attendance = Attendance.objects.filter(event=event, user_id=user_id).exclude(status=Attendance.STATUS_CANCELLED).first()
         if attendance:
             return Response({"status": attendance.status})
-        in_waiting = WaitingList.objects.filter(event=event, user_id=user_id).exists()
-        return Response({"status": "waiting" if in_waiting else "not_joined"})
+        return Response({"status": "not_joined"})
 
     @action(detail=False, methods=["get"], url_path="search", permission_classes=[IsAuthenticated])
     def search(self, request):
