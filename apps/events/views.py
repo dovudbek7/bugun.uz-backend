@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.attendance.models import Attendance, WaitingList
-from apps.attendance.services import join_event, leave_event
+from apps.attendance.services import join_event, leave_event, promote_all_waiting_users
 from apps.achievements.services import award_joined_achievements
 from apps.common.permissions import IsOrganizer, IsOrganizerOwnerOrReadOnly
 from apps.events.tasks import send_event_notification
@@ -78,9 +78,12 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         event = self.get_object()
+        old_seats = event.total_seats
         serializer = self.get_serializer(event, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        if event.total_seats > old_seats:
+            promote_all_waiting_users(event)
         return Response({"message": "Event updated"})
 
     def destroy(self, request, *args, **kwargs):
@@ -148,6 +151,16 @@ class EventViewSet(viewsets.ModelViewSet):
             return forbidden
         items = WaitingList.objects.filter(event=event).select_related("user")
         return Response(WaitingListSerializer(items, many=True).data)
+
+    @action(detail=True, methods=["get"], url_path="waiting-list/position")
+    def waiting_list_position(self, request, pk=None):
+        event = self.get_object()
+        entry = WaitingList.objects.filter(event=event, user=request.user).first()
+        if not entry:
+            return Response({"position": None, "total": WaitingList.objects.filter(event=event).count()})
+        position = WaitingList.objects.filter(event=event, created_at__lt=entry.created_at).count() + 1
+        total = WaitingList.objects.filter(event=event).count()
+        return Response({"position": position, "total": total})
 
     @action(detail=True, methods=["post"], url_path=r"attendance/(?P<user_id>\d+)")
     def mark_attendance(self, request, pk=None, user_id=None):

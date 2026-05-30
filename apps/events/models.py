@@ -53,5 +53,9 @@ class Event(models.Model):
     def seats_left(self):
         return max(self.total_seats - self.joined_count, 0)
 
+    @property
+    def waiting_count(self):
+        return self.waiting_list.count()
+
     def __str__(self):
         return self.title

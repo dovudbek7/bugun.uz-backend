@@ -82,3 +82,19 @@ def promote_next_waiting_user(event):
     next_waiting.delete()
     _notify(next_waiting.user_id, event.pk, "promoted")
     return attendance
+
+
+def promote_all_waiting_users(event):
+    """Promote waiting users until no seats left or waiting list empty."""
+    from apps.events.models import Event as _Event
+    event = _Event.objects.get(pk=event.pk)
+    while event.seats_left > 0:
+        next_waiting = WaitingList.objects.select_related("user").filter(event=event).first()
+        if not next_waiting:
+            break
+        attendance, _ = Attendance.objects.get_or_create(user=next_waiting.user, event=event)
+        attendance.status = Attendance.STATUS_JOINED
+        attendance.save(update_fields=["status"])
+        next_waiting.delete()
+        _notify(next_waiting.user_id, event.pk, "promoted")
+        event = _Event.objects.get(pk=event.pk)

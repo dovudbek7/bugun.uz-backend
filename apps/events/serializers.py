@@ -25,6 +25,7 @@ class EventListSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     location = LocationSerializer()
     seats_left = serializers.IntegerField(read_only=True)
+    waiting_count = serializers.IntegerField(read_only=True)
     participants = serializers.SerializerMethodField()
     organizer = serializers.SerializerMethodField()
 
@@ -41,6 +42,7 @@ class EventListSerializer(serializers.ModelSerializer):
             "event_time",
             "total_seats",
             "seats_left",
+            "waiting_count",
             "status",
             "participants",
             "organizer",
