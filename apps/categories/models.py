@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -23,3 +24,16 @@ class Category(models.Model):
         if lang == "en" and self.title_en:
             return self.title_en
         return self.title
+
+
+class CategorySubscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="category_subscriptions")
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="subscribers")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "category")
+        indexes = [models.Index(fields=["category", "user"])]
+
+    def __str__(self):
+        return f"{self.user_id}:{self.category_id}"

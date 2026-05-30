@@ -23,3 +23,15 @@ class OrganizerApplication(models.Model):
 
     def __str__(self):
         return f"{self.user_id}:{self.status}"
+
+
+class OrganizerProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="organizer_profile")
+    bio = models.TextField(blank=True)
+    website = models.URLField(blank=True)
+    social_links = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"OrganizerProfile({self.user_id})"

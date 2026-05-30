@@ -70,6 +70,7 @@ def leave_event(user, event):
     uid, eid = user.id, event.pk
     transaction.on_commit(lambda: _notify(uid, eid, "cancelled"))
     promote_next_waiting_user(event)
+    transaction.on_commit(lambda: notify_waiting_positions(event.pk))
     return "Left successfully"
 
 
@@ -84,6 +85,15 @@ def promote_next_waiting_user(event):
     next_waiting.delete()
     _notify(next_waiting.user_id, event.pk, "promoted")
     return attendance
+
+
+def notify_waiting_positions(event_pk):
+    from apps.events.tasks import send_position_notification
+    waiting = list(WaitingList.objects.filter(event_id=event_pk).order_by("created_at").values_list("user_id", flat=True))
+    for idx, user_id in enumerate(waiting):
+        pos = idx + 1
+        if pos < 5 or pos % 5 == 0:
+            send_position_notification.delay(user_id, event_pk, pos)
 
 
 def promote_all_waiting_users(event):

@@ -1,7 +1,7 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import OrganizerApplication
+from .models import OrganizerApplication, OrganizerProfile
 
 
 class OrganizerApplicationCreateSerializer(serializers.ModelSerializer):
@@ -31,3 +31,27 @@ class OrganizerApplicationSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.DictField())
     def get_user(self, obj):
         return {"id": obj.user_id, "full_name": obj.user.full_name, "telegram_username": obj.user.telegram_username}
+
+
+class OrganizerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrganizerProfile
+        fields = ("bio", "website", "social_links", "updated_at")
+
+
+class OrganizerProfilePublicSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrganizerProfile
+        fields = ("user", "bio", "website", "social_links")
+
+    @extend_schema_field(serializers.DictField())
+    def get_user(self, obj):
+        return {
+            "id": obj.user_id,
+            "full_name": obj.user.full_name,
+            "avatar": obj.user.avatar,
+            "rating": str(obj.user.rating),
+            "total_attended": obj.user.total_attended,
+        }

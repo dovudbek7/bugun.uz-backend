@@ -25,6 +25,7 @@ class Event(models.Model):
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_UPCOMING)
     is_draft = models.BooleanField(default=False)
     reminder_sent = models.BooleanField(default=False)
+    cancellation_reason = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -12,7 +12,7 @@ from apps.categories.views import CategoryViewSet
 from apps.events.views import EventViewSet, MapEventsView
 from apps.interests.views import InterestViewSet
 from apps.locations.views import LocationViewSet
-from apps.organizer.views import AdminOrganizerRequestViewSet, OrganizerRequestView
+from apps.organizer.views import AdminOrganizerRequestViewSet, OrganizerProfileMeView, OrganizerProfileView, OrganizerRequestView
 from apps.ratings.views import LeaderboardView, RatingViewSet
 from apps.reports.views import AdminReportViewSet, ReportViewSet
 
@@ -38,6 +38,8 @@ urlpatterns = [
     path("api/auth/dev-login/", DevLoginView.as_view(), name="dev-login"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/organizer/request/", OrganizerRequestView.as_view(), name="organizer-request"),
+    path("api/organizer/profile/me/", OrganizerProfileMeView.as_view(), name="organizer-profile-me"),
+    path("api/organizer/<int:user_id>/profile/", OrganizerProfileView.as_view(), name="organizer-profile"),
     path("api/leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     path("api/achievements/me/", MyAchievementsView.as_view(), name="my-achievements"),
     path("api/history/me/", HistoryView.as_view(), name="my-history"),

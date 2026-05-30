@@ -10,7 +10,7 @@ from apps.attendance.models import Attendance, WaitingList
 from apps.attendance.services import join_event, leave_event, promote_all_waiting_users
 from apps.achievements.services import award_joined_achievements
 from apps.common.permissions import IsOrganizer, IsOrganizerOwnerOrReadOnly
-from apps.events.tasks import send_event_notification
+from apps.events.tasks import notify_category_subscribers, send_attendance_notification, send_event_notification, send_new_event_notification
 
 from .models import Event
 from .serializers import (
@@ -71,9 +71,14 @@ class EventViewSet(viewsets.ModelViewSet):
         return None
 
     def create(self, request, *args, **kwargs):
+        from apps.accounts.models import UserFollow
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        event = serializer.save()
+        follower_ids = UserFollow.objects.filter(following=request.user).values_list("follower_id", flat=True)
+        for fid in follower_ids:
+            send_new_event_notification.delay(fid, event.pk)
+        notify_category_subscribers.delay(event.pk)
         return Response({"message": "Event created"}, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
@@ -88,11 +93,13 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         event = self.get_object()
+        reason = request.data.get("reason", "")
         event.status = Event.STATUS_CANCELLED
-        event.save(update_fields=["status", "updated_at"])
+        event.cancellation_reason = reason
+        event.save(update_fields=["status", "cancellation_reason", "updated_at"])
         participants = Attendance.objects.filter(event=event, status__in=[Attendance.STATUS_JOINED, Attendance.STATUS_ATTENDED])
         for attendance in participants.only("user_id"):
-            send_event_notification.delay(attendance.user_id, f"Event cancelled: {event.title}.")
+            send_attendance_notification.delay(attendance.user_id, event.pk, "org_cancelled")
         return Response({"message": "Event deleted"})
 
     @action(detail=False, methods=["get"], url_path="today", permission_classes=[IsAuthenticated])
@@ -175,6 +182,33 @@ class EventViewSet(viewsets.ModelViewSet):
         position = WaitingList.objects.filter(event=event, created_at__lt=entry.created_at).count() + 1
         total = WaitingList.objects.filter(event=event).count()
         return Response({"position": position, "total": total})
+
+    @action(detail=True, methods=["get"], url_path="analytics")
+    def analytics(self, request, pk=None):
+        event = self.get_object()
+        forbidden = self._require_event_manager(event)
+        if forbidden:
+            return forbidden
+        from django.db.models import Count
+        counts = Attendance.objects.filter(event=event).aggregate(
+            joined=Count("id", filter=Q(status=Attendance.STATUS_JOINED)),
+            attended=Count("id", filter=Q(status=Attendance.STATUS_ATTENDED)),
+            cancelled=Count("id", filter=Q(status=Attendance.STATUS_CANCELLED)),
+        )
+        joined = counts["joined"]
+        attended = counts["attended"]
+        waiting = event.waiting_list.count()
+        fill_rate = round(joined / event.total_seats * 100) if event.total_seats else 0
+        attendance_rate = round(attended / joined * 100) if joined else 0
+        return Response({
+            "total_seats": event.total_seats,
+            "joined_count": joined,
+            "attended_count": attended,
+            "cancelled_count": counts["cancelled"],
+            "waiting_count": waiting,
+            "fill_rate": fill_rate,
+            "attendance_rate": attendance_rate,
+        })
 
     @action(detail=True, methods=["post"], url_path=r"attendance/(?P<user_id>\d+)")
     def mark_attendance(self, request, pk=None, user_id=None):

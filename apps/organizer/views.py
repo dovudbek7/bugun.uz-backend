@@ -1,13 +1,21 @@
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.permissions import IsAdminUser
 from apps.events.tasks import send_event_notification
 
-from .models import OrganizerApplication
-from .serializers import OrganizerApplicationCreateSerializer, OrganizerApplicationSerializer
+from apps.common.permissions import IsOrganizer
+
+from .models import OrganizerApplication, OrganizerProfile
+from .serializers import (
+    OrganizerApplicationCreateSerializer,
+    OrganizerApplicationSerializer,
+    OrganizerProfilePublicSerializer,
+    OrganizerProfileSerializer,
+)
 
 
 class OrganizerRequestView(GenericAPIView):
@@ -48,3 +56,35 @@ class AdminOrganizerRequestViewSet(mixins.ListModelMixin, viewsets.GenericViewSe
         application.save(update_fields=["status"])
         send_event_notification.delay(application.user_id, "Your organizer request has been rejected.")
         return Response({"message": "Organizer rejected"})
+
+
+class OrganizerProfileView(GenericAPIView):
+    """Public: GET /api/organizer/{user_id}/profile/"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrganizerProfilePublicSerializer
+
+    def get(self, request, user_id):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.filter(pk=user_id, is_organizer=True).first()
+        if not user:
+            return Response({"detail": "Organizer not found."}, status=status.HTTP_404_NOT_FOUND)
+        profile, _ = OrganizerProfile.objects.select_related("user").get_or_create(user=user)
+        return Response(OrganizerProfilePublicSerializer(profile).data)
+
+
+class OrganizerProfileMeView(GenericAPIView):
+    """Organizer: GET/PUT /api/organizer/profile/me/"""
+    permission_classes = [IsAuthenticated, IsOrganizer]
+    serializer_class = OrganizerProfileSerializer
+
+    def get(self, request):
+        profile, _ = OrganizerProfile.objects.get_or_create(user=request.user)
+        return Response(OrganizerProfileSerializer(profile).data)
+
+    def put(self, request):
+        profile, _ = OrganizerProfile.objects.get_or_create(user=request.user)
+        serializer = OrganizerProfileSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Profile updated"})

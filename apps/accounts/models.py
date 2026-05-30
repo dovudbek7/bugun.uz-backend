@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -51,3 +52,16 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.full_name or self.telegram_username or self.username
+
+
+class UserFollow(models.Model):
+    follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following")
+    following = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="followers")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("follower", "following")
+        indexes = [models.Index(fields=["following", "created_at"])]
+
+    def __str__(self):
+        return f"{self.follower_id}->{self.following_id}"

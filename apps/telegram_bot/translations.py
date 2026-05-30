@@ -143,6 +143,27 @@ TEXTS = {
             "📍 Joy: {location}\n"
             "📌 Manzil: {address}"
         ),
+        "event_org_cancelled": (
+            "❌ <b>{title}</b> bekor qilindi.\n\n"
+            "📅 Sana: {date}\n"
+            "💬 Sabab: {reason}"
+        ),
+        "waiting_position_update": "⏳ <b>{title}</b> kutish ro'yxatida siz <b>{position}-o'rinda</b>siz.",
+        "new_event_from_organizer": (
+            "🆕 <b>{organizer}</b> yangi event ochdi!\n\n"
+            "<b>{title}</b>\n"
+            "📅 {date} | 🕐 {time}"
+        ),
+        "rate_organizer_prompt": (
+            "🎮 <b>{title}</b> tugadi!\n"
+            "Organizer <b>{organizer}</b> ni baholaysizmi?"
+        ),
+        "rate_organizer_done": "✅ Bahoingiz qabul qilindi!",
+        "rate_organizer_skip": "⏭ O'tkazib yuborish",
+        "already_rated": "✅ Siz allaqachon baholagansiz.",
+        "subscribe_title": "📋 Kategoriyani tanlang:",
+        "subscribed": "✅ <b>{category}</b> ga obuna bo'ldingiz.",
+        "unsubscribed": "❎ <b>{category}</b> dan obuna bekor qilindi.",
     },
     "ru": {
         "choose_language": "🌐 Выберите язык:",
@@ -232,6 +253,27 @@ TEXTS = {
             "📍 Место: {location}\n"
             "📌 Адрес: {address}"
         ),
+        "event_org_cancelled": (
+            "❌ <b>{title}</b> отменено.\n\n"
+            "📅 Дата: {date}\n"
+            "💬 Причина: {reason}"
+        ),
+        "waiting_position_update": "⏳ В списке ожидания <b>{title}</b> вы на <b>{position} месте</b>.",
+        "new_event_from_organizer": (
+            "🆕 <b>{organizer}</b> открыл новое мероприятие!\n\n"
+            "<b>{title}</b>\n"
+            "📅 {date} | 🕐 {time}"
+        ),
+        "rate_organizer_prompt": (
+            "🎮 <b>{title}</b> завершилось!\n"
+            "Оцените организатора <b>{organizer}</b>?"
+        ),
+        "rate_organizer_done": "✅ Ваша оценка принята!",
+        "rate_organizer_skip": "⏭ Пропустить",
+        "already_rated": "✅ Вы уже оценили.",
+        "subscribe_title": "📋 Выберите категорию:",
+        "subscribed": "✅ Вы подписались на <b>{category}</b>.",
+        "unsubscribed": "❎ Подписка на <b>{category}</b> отменена.",
     },
     "en": {
         "choose_language": "🌐 Choose your language:",
@@ -321,6 +363,27 @@ TEXTS = {
             "📍 Venue: {location}\n"
             "📌 Address: {address}"
         ),
+        "event_org_cancelled": (
+            "❌ <b>{title}</b> has been cancelled.\n\n"
+            "📅 Date: {date}\n"
+            "💬 Reason: {reason}"
+        ),
+        "waiting_position_update": "⏳ You are now <b>#{position}</b> in the waiting list for <b>{title}</b>.",
+        "new_event_from_organizer": (
+            "🆕 <b>{organizer}</b> posted a new event!\n\n"
+            "<b>{title}</b>\n"
+            "📅 {date} | 🕐 {time}"
+        ),
+        "rate_organizer_prompt": (
+            "🎮 <b>{title}</b> is over!\n"
+            "Would you rate organizer <b>{organizer}</b>?"
+        ),
+        "rate_organizer_done": "✅ Your rating has been submitted!",
+        "rate_organizer_skip": "⏭ Skip",
+        "already_rated": "✅ You already rated this organizer.",
+        "subscribe_title": "📋 Choose a category:",
+        "subscribed": "✅ Subscribed to <b>{category}</b>.",
+        "unsubscribed": "❎ Unsubscribed from <b>{category}</b>.",
     },
 }
 

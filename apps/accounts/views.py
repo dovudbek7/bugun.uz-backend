@@ -85,6 +85,81 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             data.pop("phone_number", None)
         return Response(data)
 
+    @action(detail=True, methods=["get", "post"], url_path="follow")
+    def follow(self, request, pk=None):
+        from .models import UserFollow
+        target = self.get_object()
+        if target.id == request.user.id:
+            return Response({"detail": "Cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+        if request.method == "GET":
+            following = UserFollow.objects.filter(follower=request.user, following=target).exists()
+            return Response({"following": following})
+        existing = UserFollow.objects.filter(follower=request.user, following=target).first()
+        if existing:
+            existing.delete()
+            return Response({"following": False})
+        UserFollow.objects.create(follower=request.user, following=target)
+        return Response({"following": True}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["get"], url_path="me/followers")
+    def followers_count(self, request):
+        from .models import UserFollow
+        followers = UserFollow.objects.filter(following=request.user).count()
+        following = UserFollow.objects.filter(follower=request.user).count()
+        return Response({"followers": followers, "following": following})
+
+    @action(detail=False, methods=["get"], url_path="me/stats")
+    def stats(self, request):
+        from django.db.models import Count
+        from django.utils import timezone as tz
+        user = request.user
+
+        total = Attendance.objects.filter(user=user, status__in=[Attendance.STATUS_JOINED, Attendance.STATUS_ATTENDED]).count()
+
+        top_cat_qs = (
+            Attendance.objects.filter(user=user, status__in=[Attendance.STATUS_JOINED, Attendance.STATUS_ATTENDED])
+            .values("event__category__id", "event__category__title")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+            .first()
+        )
+        top_category = None
+        if top_cat_qs:
+            top_category = {
+                "id": top_cat_qs["event__category__id"],
+                "title": top_cat_qs["event__category__title"],
+                "count": top_cat_qs["count"],
+            }
+
+        months = max((tz.now() - user.date_joined).days / 30, 1)
+        avg_per_month = round(total / months, 1)
+
+        attended_event_ids = Attendance.objects.filter(
+            user=user, status=Attendance.STATUS_ATTENDED
+        ).values_list("event_id", flat=True)
+        co_attendee_qs = (
+            Attendance.objects.filter(event_id__in=attended_event_ids, status=Attendance.STATUS_ATTENDED)
+            .exclude(user=user)
+            .values("user_id", "user__full_name")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+            .first()
+        )
+        favorite_co_attendee = None
+        if co_attendee_qs:
+            favorite_co_attendee = {
+                "id": co_attendee_qs["user_id"],
+                "full_name": co_attendee_qs["user__full_name"],
+                "count": co_attendee_qs["count"],
+            }
+
+        return Response({
+            "total_events": total,
+            "top_category": top_category,
+            "avg_per_month": avg_per_month,
+            "favorite_co_attendee": favorite_co_attendee,
+        })
+
 
 class DevLoginView(GenericAPIView):
     """DEBUG-only: returns JWT tokens for any mock user — never enabled in production."""
