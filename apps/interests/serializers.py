@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Interest
@@ -10,6 +11,7 @@ class InterestSerializer(serializers.ModelSerializer):
         model = Interest
         fields = ("id", "title", "title_ru", "title_en", "icon")
 
+    @extend_schema_field(serializers.CharField())
     def get_title(self, obj):
         request = self.context.get("request")
         lang = "uz_latn"

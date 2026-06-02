@@ -1,9 +1,11 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework.generics import ListAPIView
 
 from .models import Achievement
 from .serializers import AchievementSerializer
 
 
+@extend_schema(tags=["Achievements"], summary="List current user's achievements")
 class MyAchievementsView(ListAPIView):
     serializer_class = AchievementSerializer
     pagination_class = None

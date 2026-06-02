@@ -1,6 +1,6 @@
 from django.db.models import Q
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
@@ -24,7 +24,29 @@ from .serializers import (
     WaitingListSerializer,
 )
 
+_MSG_RESPONSE = inline_serializer("EventMsgResponse", fields={"message": serializers.CharField()})
 
+_JOIN_STATUS_RESPONSE = inline_serializer("JoinStatusResponse", fields={
+    "status": serializers.ChoiceField(choices=["not_joined", "waiting", "joined", "attended", "cancelled"]),
+})
+
+_WAITING_POSITION_RESPONSE = inline_serializer("WaitingPositionResponse", fields={
+    "position": serializers.IntegerField(allow_null=True),
+    "total": serializers.IntegerField(),
+})
+
+_ANALYTICS_RESPONSE = inline_serializer("EventAnalyticsResponse", fields={
+    "total_seats": serializers.IntegerField(),
+    "joined_count": serializers.IntegerField(),
+    "attended_count": serializers.IntegerField(),
+    "cancelled_count": serializers.IntegerField(),
+    "waiting_count": serializers.IntegerField(),
+    "fill_rate": serializers.IntegerField(),
+    "attendance_rate": serializers.IntegerField(),
+})
+
+
+@extend_schema(tags=["Events"])
 class EventViewSet(viewsets.ModelViewSet):
     filterset_fields = ("category", "status", "is_draft")
 
@@ -71,6 +93,7 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Only the event organizer can manage this event."}, status=status.HTTP_403_FORBIDDEN)
         return None
 
+    @extend_schema(summary="Create event", responses={201: _MSG_RESPONSE})
     def create(self, request, *args, **kwargs):
         from apps.accounts.models import UserFollow
         serializer = self.get_serializer(data=request.data)
@@ -82,6 +105,7 @@ class EventViewSet(viewsets.ModelViewSet):
         notify_category_subscribers.delay(event.pk)
         return Response({"message": "Event created"}, status=status.HTTP_201_CREATED)
 
+    @extend_schema(summary="Update event", responses={200: _MSG_RESPONSE})
     def update(self, request, *args, **kwargs):
         event = self.get_object()
         old_seats = event.total_seats
@@ -92,6 +116,7 @@ class EventViewSet(viewsets.ModelViewSet):
             promote_all_waiting_users(event)
         return Response({"message": "Event updated"})
 
+    @extend_schema(summary="Delete (cancel) event", responses={200: _MSG_RESPONSE})
     def destroy(self, request, *args, **kwargs):
         event = self.get_object()
         reason = request.data.get("reason", "")
@@ -104,6 +129,7 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response({"message": "Event deleted"})
 
     @extend_schema(
+        summary="Cancel event (organizer) or leave event (user)",
         request=inline_serializer("CancelRequest", fields={"reason": serializers.CharField(required=False, allow_blank=True)}),
         responses={200: OpenApiResponse(description="Cancelled successfully")},
     )
@@ -129,11 +155,17 @@ class EventViewSet(viewsets.ModelViewSet):
         message = leave_event(request.user, event)
         return Response({"message": message})
 
+    @extend_schema(summary="List today's upcoming events", responses={200: EventListSerializer(many=True)})
     @action(detail=False, methods=["get"], url_path="today", permission_classes=[IsAuthenticated])
     def today(self, request):
         queryset = self.get_queryset().filter(event_date=timezone.localdate(), status=Event.STATUS_UPCOMING)
         return Response(EventListSerializer(queryset, many=True).data)
 
+    @extend_schema(
+        summary="Check user's join status for an event",
+        parameters=[OpenApiParameter("user_id", int, description="Defaults to current user")],
+        responses={200: _JOIN_STATUS_RESPONSE},
+    )
     @action(detail=True, methods=["get"], url_path="join-status", permission_classes=[IsAuthenticated])
     def join_status(self, request, pk=None):
         event = self.get_object()
@@ -146,6 +178,11 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"status": attendance.status})
         return Response({"status": "not_joined"})
 
+    @extend_schema(
+        summary="Get event by deep link ref",
+        parameters=[OpenApiParameter("ref", str, description="Deep link ref, e.g. event_42")],
+        responses={200: EventDetailSerializer, 400: OpenApiResponse(description="Invalid ref"), 404: OpenApiResponse(description="Not found")},
+    )
     @action(detail=False, methods=["get"], url_path="by-deep-link", permission_classes=[IsAuthenticated])
     def by_deep_link(self, request):
         ref = request.query_params.get("ref", "")
@@ -158,6 +195,11 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"detail": "not found"}, status=status.HTTP_404_NOT_FOUND)
         return Response(EventDetailSerializer(event).data)
 
+    @extend_schema(
+        summary="Search events",
+        parameters=[OpenApiParameter("q", str, description="Search query (title, category, organizer, location)")],
+        responses={200: EventSearchSerializer(many=True)},
+    )
     @action(detail=False, methods=["get"], url_path="search", permission_classes=[IsAuthenticated])
     def search(self, request):
         q = request.query_params.get("q", "").strip()
@@ -172,16 +214,19 @@ class EventViewSet(viewsets.ModelViewSet):
             ).distinct()
         return Response(EventSearchSerializer(queryset[:50], many=True).data)
 
+    @extend_schema(summary="Join event", responses={200: _MSG_RESPONSE})
     @action(detail=True, methods=["post"])
     def join(self, request, pk=None):
         message = join_event(request.user, self.get_object())
         return Response({"message": message})
 
+    @extend_schema(summary="Leave event", responses={200: _MSG_RESPONSE})
     @action(detail=True, methods=["post"])
     def leave(self, request, pk=None):
         message = leave_event(request.user, self.get_object())
         return Response({"message": message})
 
+    @extend_schema(summary="List event participants (organizer only)", responses={200: ParticipantSerializer(many=True)})
     @action(detail=True, methods=["get"])
     def participants(self, request, pk=None):
         event = self.get_object()
@@ -191,6 +236,7 @@ class EventViewSet(viewsets.ModelViewSet):
         items = Attendance.objects.filter(event=event).exclude(status=Attendance.STATUS_CANCELLED).select_related("user")
         return Response(ParticipantSerializer(items, many=True).data)
 
+    @extend_schema(summary="List waiting list (organizer only)", responses={200: WaitingListSerializer(many=True)})
     @action(detail=True, methods=["get"], url_path="waiting-list")
     def waiting_list(self, request, pk=None):
         event = self.get_object()
@@ -200,6 +246,7 @@ class EventViewSet(viewsets.ModelViewSet):
         items = WaitingList.objects.filter(event=event).select_related("user")
         return Response(WaitingListSerializer(items, many=True).data)
 
+    @extend_schema(summary="Get current user's position in waiting list", responses={200: _WAITING_POSITION_RESPONSE})
     @action(detail=True, methods=["get"], url_path="waiting-list/position")
     def waiting_list_position(self, request, pk=None):
         event = self.get_object()
@@ -210,6 +257,7 @@ class EventViewSet(viewsets.ModelViewSet):
         total = WaitingList.objects.filter(event=event).count()
         return Response({"position": position, "total": total})
 
+    @extend_schema(summary="Get event analytics (organizer only)", responses={200: _ANALYTICS_RESPONSE})
     @action(detail=True, methods=["get"], url_path="analytics")
     def analytics(self, request, pk=None):
         event = self.get_object()
@@ -237,6 +285,11 @@ class EventViewSet(viewsets.ModelViewSet):
             "attendance_rate": attendance_rate,
         })
 
+    @extend_schema(
+        summary="Mark user as attended",
+        request=None,
+        responses={200: _MSG_RESPONSE, 404: OpenApiResponse(description="Joined attendance not found")},
+    )
     @action(detail=True, methods=["post"], url_path=r"attendance/(?P<user_id>\d+)")
     def mark_attendance(self, request, pk=None, user_id=None):
         event = self.get_object()
@@ -255,6 +308,7 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response({"message": "User marked as attended"})
 
 
+@extend_schema(tags=["Events"], summary="List events with map coordinates")
 class MapEventsView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = EventMapSerializer

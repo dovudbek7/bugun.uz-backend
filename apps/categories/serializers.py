@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Category
@@ -10,6 +11,7 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ("id", "name", "title_ru", "title_en", "icon", "color")
 
+    @extend_schema_field(serializers.CharField())
     def get_name(self, obj):
         request = self.context.get("request")
         lang = "uz_latn"

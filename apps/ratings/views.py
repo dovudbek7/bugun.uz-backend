@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
-from rest_framework import mixins, status, viewsets
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 
@@ -13,10 +14,15 @@ from .serializers import LeaderboardSerializer, RatingSerializer
 User = get_user_model()
 
 
+@extend_schema(tags=["Ratings"])
 class RatingViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Rating.objects.all()
     serializer_class = RatingSerializer
 
+    @extend_schema(
+        summary="Submit rating for an event",
+        responses={201: inline_serializer("RatingCreated", fields={"message": serializers.CharField()})},
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -24,6 +30,15 @@ class RatingViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response({"message": "Rating submitted"}, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    tags=["Ratings"],
+    summary="Get top 100 users leaderboard",
+    parameters=[
+        OpenApiParameter("start_date", str, description="Filter events from this date (YYYY-MM-DD)"),
+        OpenApiParameter("end_date", str, description="Filter events up to this date (YYYY-MM-DD)"),
+    ],
+    responses={200: LeaderboardSerializer(many=True)},
+)
 class LeaderboardView(ListAPIView):
     serializer_class = LeaderboardSerializer
     pagination_class = None

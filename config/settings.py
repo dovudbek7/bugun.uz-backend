@@ -150,6 +150,12 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "Community Event Platform API",
     "DESCRIPTION": "Backend API for community events, attendance, ratings, reports, and organizers.",
     "VERSION": "1.0.0",
+    "ENUM_NAME_OVERRIDES": {
+        "AttendanceStatusEnum": "apps.attendance.models.Attendance.STATUS_CHOICES",
+        "OrganizerApplicationStatusEnum": "apps.organizer.models.OrganizerApplication.STATUS_CHOICES",
+        "EventStatusEnum": "apps.events.models.Event.STATUS_CHOICES",
+    },
+    "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
 }
 
 CORS_ALLOWED_ORIGINS = os.environ.get(

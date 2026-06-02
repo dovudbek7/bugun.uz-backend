@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework import mixins, status, viewsets
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -21,41 +22,98 @@ from .serializers import (
 
 User = get_user_model()
 
+_AUTH_RESPONSE = inline_serializer("AuthResponse", fields={
+    "access": serializers.CharField(),
+    "refresh": serializers.CharField(),
+    "user": inline_serializer("AuthUser", fields={
+        "id": serializers.IntegerField(),
+        "full_name": serializers.CharField(),
+        "is_organizer": serializers.BooleanField(),
+    }),
+})
 
+_MSG_RESPONSE = inline_serializer("MessageResponse", fields={"message": serializers.CharField()})
+
+_FOLLOW_STATUS_RESPONSE = inline_serializer("FollowStatusResponse", fields={"following": serializers.BooleanField()})
+
+_FOLLOW_COUNTS_RESPONSE = inline_serializer("FollowCountsResponse", fields={
+    "followers": serializers.IntegerField(),
+    "following": serializers.IntegerField(),
+})
+
+
+_STATS_RESPONSE = inline_serializer("StatsResponse", fields={
+    "total_events": serializers.IntegerField(),
+    "top_category": inline_serializer("TopCategory", fields={
+        "id": serializers.IntegerField(),
+        "title": serializers.CharField(),
+        "count": serializers.IntegerField(),
+    }, allow_null=True),
+    "avg_per_month": serializers.FloatField(),
+    "favorite_co_attendee": inline_serializer("FavoriteCoAttendee", fields={
+        "id": serializers.IntegerField(),
+        "full_name": serializers.CharField(),
+        "count": serializers.IntegerField(),
+    }, allow_null=True),
+})
+
+
+@extend_schema(tags=["Auth"])
 class TelegramLoginView(GenericAPIView):
     serializer_class = TelegramLoginSerializer
     permission_classes = [AllowAny]
 
+    @extend_schema(summary="Telegram bot login", responses={200: _AUTH_RESPONSE})
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.save())
 
 
+@extend_schema(tags=["Auth"])
 class TelegramWebAppLoginView(GenericAPIView):
     serializer_class = TelegramWebAppLoginSerializer
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Telegram WebApp login",
+        responses={
+            200: inline_serializer("WebAppAuthResponse", fields={
+                "access": serializers.CharField(),
+                "refresh": serializers.CharField(),
+                "needs_onboarding": serializers.BooleanField(),
+                "user": inline_serializer("WebAppAuthUser", fields={
+                    "id": serializers.IntegerField(),
+                    "full_name": serializers.CharField(),
+                    "is_organizer": serializers.BooleanField(),
+                }),
+            }),
+        },
+    )
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.save())
 
 
+@extend_schema(tags=["Auth"])
 class SubmitPhoneView(GenericAPIView):
     serializer_class = SubmitPhoneSerializer
     permission_classes = [AllowAny]
 
+    @extend_schema(summary="Submit phone number (WebApp flow)", responses={200: _AUTH_RESPONSE})
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.save())
 
 
+@extend_schema(tags=["Profile"])
 class OnboardingView(GenericAPIView):
     serializer_class = ProfileUpdateSerializer
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(summary="Update profile (onboarding)", responses={200: _MSG_RESPONSE})
     def post(self, request):
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -63,10 +121,22 @@ class OnboardingView(GenericAPIView):
         return Response({"message": "Profile updated"})
 
 
+@extend_schema(tags=["Profile"])
 class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = User.objects.prefetch_related("user_interests__interest", "user_achievements__achievement")
     serializer_class = ProfileSerializer
 
+    @extend_schema(
+        summary="Get or update own profile",
+        methods=["GET"],
+        responses={200: ProfileSerializer},
+    )
+    @extend_schema(
+        summary="Update own profile",
+        methods=["PUT"],
+        request=ProfileUpdateSerializer,
+        responses={200: _MSG_RESPONSE},
+    )
     @action(detail=False, methods=["get", "put"], url_path="me")
     def me(self, request):
         if request.method == "GET":
@@ -76,6 +146,7 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         serializer.save()
         return Response({"message": "Profile updated"})
 
+    @extend_schema(summary="Get user profile by ID", responses={200: ProfileSerializer})
     def retrieve(self, request, *args, **kwargs):
         user = self.get_object()
         data = self.get_serializer(user).data
@@ -85,6 +156,21 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             data.pop("phone_number", None)
         return Response(data)
 
+    @extend_schema(
+        summary="Check follow status",
+        methods=["GET"],
+        responses={200: _FOLLOW_STATUS_RESPONSE},
+    )
+    @extend_schema(
+        summary="Toggle follow/unfollow organizer",
+        methods=["POST"],
+        request=None,
+        responses={
+            200: _FOLLOW_STATUS_RESPONSE,
+            201: _FOLLOW_STATUS_RESPONSE,
+            400: OpenApiResponse(description="Cannot follow yourself"),
+        },
+    )
     @action(detail=True, methods=["get", "post"], url_path="follow")
     def follow(self, request, pk=None):
         from .models import UserFollow
@@ -101,6 +187,7 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         UserFollow.objects.create(follower=request.user, following=target)
         return Response({"following": True}, status=status.HTTP_201_CREATED)
 
+    @extend_schema(summary="Get own follower/following counts", responses={200: _FOLLOW_COUNTS_RESPONSE})
     @action(detail=False, methods=["get"], url_path="me/followers")
     def followers_count(self, request):
         from .models import UserFollow
@@ -108,6 +195,15 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         following = UserFollow.objects.filter(follower=request.user).count()
         return Response({"followers": followers, "following": following})
 
+    @extend_schema(
+        summary="List organizers current user follows",
+        responses={200: inline_serializer("FollowingItem", fields={
+            "id": serializers.IntegerField(),
+            "name": serializers.CharField(),
+            "icon": serializers.CharField(),
+            "followers": serializers.IntegerField(),
+        }, many=True)},
+    )
     @action(detail=False, methods=["get"], url_path="me/following")
     def following_list(self, request):
         from django.db.models import Count
@@ -128,6 +224,7 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         ]
         return Response(data)
 
+    @extend_schema(summary="Get own activity stats", responses={200: _STATS_RESPONSE})
     @action(detail=False, methods=["get"], url_path="me/stats")
     def stats(self, request):
         from django.db.models import Count
@@ -181,6 +278,7 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         })
 
 
+@extend_schema(exclude=True)
 class DevLoginView(GenericAPIView):
     """DEBUG-only: returns JWT tokens for any mock user — never enabled in production."""
     permission_classes = [AllowAny]
@@ -204,6 +302,7 @@ class DevLoginView(GenericAPIView):
         })
 
 
+@extend_schema(tags=["Profile"], summary="Get own event attendance history")
 class HistoryView(ListAPIView):
     serializer_class = HistorySerializer
     pagination_class = None
