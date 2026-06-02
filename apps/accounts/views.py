@@ -108,6 +108,26 @@ class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         following = UserFollow.objects.filter(follower=request.user).count()
         return Response({"followers": followers, "following": following})
 
+    @action(detail=False, methods=["get"], url_path="me/following")
+    def following_list(self, request):
+        from django.db.models import Count
+        from .models import UserFollow
+        organizers = (
+            User.objects.filter(followers__follower=request.user)
+            .annotate(followers_count=Count("followers"))
+            .values("id", "full_name", "avatar", "followers_count")
+        )
+        data = [
+            {
+                "id": u["id"],
+                "name": u["full_name"],
+                "icon": u["avatar"],
+                "followers": u["followers_count"],
+            }
+            for u in organizers
+        ]
+        return Response(data)
+
     @action(detail=False, methods=["get"], url_path="me/stats")
     def stats(self, request):
         from django.db.models import Count
