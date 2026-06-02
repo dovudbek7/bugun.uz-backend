@@ -33,7 +33,7 @@ urlpatterns = [
     path("dashboard/", include("apps.dashboard.urls")),
     path("api/auth/telegram/", TelegramLoginView.as_view(), name="telegram-login"),
     path("api/auth/telegram-webapp/", TelegramWebAppLoginView.as_view(), name="telegram-webapp-login"),
-    path("api/auth/onboarding/", OnboardingView.as_view(), name="onboarding"),
+    path("api/profile/change/", OnboardingView.as_view(), name="profile-change"),
     path("api/auth/submit-phone/", SubmitPhoneView.as_view(), name="submit-phone"),
     path("api/auth/dev-login/", DevLoginView.as_view(), name="dev-login"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),

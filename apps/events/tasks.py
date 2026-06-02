@@ -200,6 +200,22 @@ def send_new_event_notification(user_id, event_id):
 
 
 @shared_task
+def notify_organizer_milestone(event_id, count):
+    import html as html_module
+    from apps.telegram_bot.translations import t
+
+    event = Event.objects.select_related("organizer").filter(pk=event_id).first()
+    if not event or not event.organizer.telegram_id:
+        return
+    lang = event.organizer.language or "uz_latn"
+    text = t("event_milestone_warning", lang).format(
+        title=html_module.escape(event.title),
+        count=count,
+    )
+    send_telegram_message(event.organizer.telegram_id, text)
+
+
+@shared_task
 def notify_category_subscribers(event_id):
     from apps.categories.models import CategorySubscription
     event = Event.objects.filter(pk=event_id).first()

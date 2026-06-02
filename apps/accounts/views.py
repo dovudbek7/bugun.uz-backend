@@ -11,7 +11,6 @@ from apps.attendance.models import Attendance
 
 from .serializers import (
     HistorySerializer,
-    OnboardingSerializer,
     ProfileSerializer,
     ProfileUpdateSerializer,
     SubmitPhoneSerializer,
@@ -54,13 +53,14 @@ class SubmitPhoneView(GenericAPIView):
 
 
 class OnboardingView(GenericAPIView):
-    serializer_class = OnboardingSerializer
+    serializer_class = ProfileUpdateSerializer
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"message": "Profile completed"})
+        return Response({"message": "Profile updated"})
 
 
 class ProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):

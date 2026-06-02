@@ -137,6 +137,7 @@ TEXTS = {
         "remind_me": "⏰ 30 daqiqa oldin eslatib tur",
         "reminder_set": "✅ Eslatma qo'yildi!",
         "reminder_too_late": "⚠️ Eventga 30 daqiqadan kam qoldi.",
+        "event_already_ended": "❌ Bu event allaqachon tugagan.",
         "event_reminder": (
             "⏰ <b>{title}</b> tez orada boshlanadi!\n\n"
             "🕐 Vaqt: {time}\n"
@@ -164,6 +165,10 @@ TEXTS = {
         "subscribe_title": "📋 Kategoriyani tanlang:",
         "subscribed": "✅ <b>{category}</b> ga obuna bo'ldingiz.",
         "unsubscribed": "❎ <b>{category}</b> dan obuna bekor qilindi.",
+        "event_milestone_warning": (
+            "⚠️ <b>{title}</b> eventingizda <b>{count} ta</b> ishtirokchi bo'ldi!\n\n"
+            "Tekshirib ko'ring."
+        ),
     },
     "ru": {
         "choose_language": "🌐 Выберите язык:",
@@ -247,6 +252,7 @@ TEXTS = {
         "remind_me": "⏰ Напомнить за 30 минут",
         "reminder_set": "✅ Напоминание установлено!",
         "reminder_too_late": "⚠️ До мероприятия меньше 30 минут.",
+        "event_already_ended": "❌ Это мероприятие уже завершилось.",
         "event_reminder": (
             "⏰ <b>{title}</b> скоро начнётся!\n\n"
             "🕐 Время: {time}\n"
@@ -274,6 +280,10 @@ TEXTS = {
         "subscribe_title": "📋 Выберите категорию:",
         "subscribed": "✅ Вы подписались на <b>{category}</b>.",
         "unsubscribed": "❎ Подписка на <b>{category}</b> отменена.",
+        "event_milestone_warning": (
+            "⚠️ На ваше мероприятие <b>{title}</b> записалось <b>{count}</b> участников!\n\n"
+            "Рекомендуем проверить."
+        ),
     },
     "en": {
         "choose_language": "🌐 Choose your language:",
@@ -357,6 +367,7 @@ TEXTS = {
         "remind_me": "⏰ Remind me 30 min before",
         "reminder_set": "✅ Reminder set!",
         "reminder_too_late": "⚠️ Less than 30 minutes until the event.",
+        "event_already_ended": "❌ This event has already ended.",
         "event_reminder": (
             "⏰ <b>{title}</b> is starting soon!\n\n"
             "🕐 Time: {time}\n"
@@ -384,6 +395,10 @@ TEXTS = {
         "subscribe_title": "📋 Choose a category:",
         "subscribed": "✅ Subscribed to <b>{category}</b>.",
         "unsubscribed": "❎ Unsubscribed from <b>{category}</b>.",
+        "event_milestone_warning": (
+            "⚠️ Your event <b>{title}</b> now has <b>{count}</b> participants!\n\n"
+            "Time to check in."
+        ),
     },
 }
 

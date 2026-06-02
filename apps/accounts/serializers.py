@@ -211,9 +211,35 @@ class ProfileSerializer(serializers.ModelSerializer):
         ]
 
 
-class ProfileUpdateSerializer(OnboardingSerializer):
-    class Meta(OnboardingSerializer.Meta):
-        fields = ("full_name", "age", "region", "phone_number", "show_telegram", "language", "interests")
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    interests = serializers.PrimaryKeyRelatedField(queryset=Interest.objects.all(), many=True, required=False)
+    phone_number = serializers.CharField(required=False, min_length=7, allow_blank=True)
+    avatar = serializers.URLField(required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "full_name",
+            "age",
+            "region",
+            "phone_number",
+            "show_telegram",
+            "language",
+            "avatar",
+            "interests",
+        )
+
+    def update(self, instance, validated_data):
+        interests = validated_data.pop("interests", None)
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        if interests is not None:
+            UserInterest.objects.filter(user=instance).delete()
+            UserInterest.objects.bulk_create(
+                [UserInterest(user=instance, interest=i) for i in interests]
+            )
+        return instance
 
 
 class HistorySerializer(serializers.ModelSerializer):

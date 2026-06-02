@@ -31,8 +31,13 @@ async def remind_callback(callback: CallbackQuery):
         await callback.answer()
         return
 
+    now = timezone.now()
+    if event.starts_at <= now:
+        await callback.answer(t("event_already_ended", lang), show_alert=True)
+        return
+
     remind_at = event.starts_at - timedelta(minutes=30)
-    if remind_at <= timezone.now():
+    if remind_at <= now:
         await callback.answer(t("reminder_too_late", lang), show_alert=True)
         return
 

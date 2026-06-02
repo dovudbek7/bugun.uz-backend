@@ -1,12 +1,14 @@
 import threading
+from datetime import timedelta
 
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.events.models import Event
 from apps.events.tasks import send_attendance_notification
 
-from .models import Attendance, WaitingList
+from .models import Attendance, EventReminder, WaitingList
 
 
 def _notify(user_id, event_id, notification_type):
@@ -17,6 +19,34 @@ def _notify(user_id, event_id, notification_type):
         except Exception:
             pass
     threading.Thread(target=_run, daemon=True).start()
+
+
+def _maybe_schedule_reminder(user_id, event_pk):
+    """Auto-create a 30-min reminder for users who join within 24h of the event."""
+    from django.contrib.auth import get_user_model
+    event = Event.objects.filter(pk=event_pk).first()
+    if not event:
+        return
+    now = timezone.now()
+    time_left = event.starts_at - now
+    if timedelta(minutes=30) < time_left <= timedelta(hours=24):
+        remind_at = event.starts_at - timedelta(minutes=30)
+        user = get_user_model().objects.filter(pk=user_id).first()
+        if user:
+            EventReminder.objects.update_or_create(
+                user=user,
+                event=event,
+                defaults={"remind_at": remind_at, "sent": False},
+            )
+
+
+def _check_milestone(event_pk):
+    from apps.events.tasks import notify_organizer_milestone
+    count = Attendance.objects.filter(
+        event_id=event_pk, status__in=[Attendance.STATUS_JOINED, Attendance.STATUS_ATTENDED]
+    ).count()
+    if count > 0 and count % 5 == 0:
+        notify_organizer_milestone.delay(event_pk, count)
 
 
 def ensure_joinable(event):
@@ -45,6 +75,8 @@ def join_event(user, event):
             Attendance.objects.create(user=user, event=event, status=Attendance.STATUS_JOINED)
         uid, eid = user.id, event.pk
         transaction.on_commit(lambda: _notify(uid, eid, "joined"))
+        transaction.on_commit(lambda: _check_milestone(eid))
+        transaction.on_commit(lambda: _maybe_schedule_reminder(uid, eid))
         return "Joined successfully"
 
     WaitingList.objects.create(user=user, event=event)
