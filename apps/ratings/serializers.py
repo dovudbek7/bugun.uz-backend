@@ -46,7 +46,7 @@ class RatingSerializer(serializers.ModelSerializer):
 
 
 class LeaderboardSerializer(serializers.ModelSerializer):
-    score = serializers.IntegerField(source="total_attended")
+    score = serializers.IntegerField()
 
     class Meta:
         model = User
