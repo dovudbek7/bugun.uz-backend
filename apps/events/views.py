@@ -1,6 +1,7 @@
 from django.db.models import Q
 from django.utils import timezone
-from rest_framework import status, viewsets
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -101,6 +102,32 @@ class EventViewSet(viewsets.ModelViewSet):
         for attendance in participants.only("user_id"):
             send_attendance_notification.delay(attendance.user_id, event.pk, "org_cancelled")
         return Response({"message": "Event deleted"})
+
+    @extend_schema(
+        request=inline_serializer("CancelRequest", fields={"reason": serializers.CharField(required=False, allow_blank=True)}),
+        responses={200: OpenApiResponse(description="Cancelled successfully")},
+    )
+    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated])
+    def cancel(self, request, pk=None):
+        event = self.get_object()
+        is_owner = request.user.is_staff or event.organizer_id == request.user.id
+
+        if is_owner:
+            if event.status == Event.STATUS_CANCELLED:
+                return Response({"detail": "Event is already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+            reason = request.data.get("reason", "")
+            event.status = Event.STATUS_CANCELLED
+            event.cancellation_reason = reason
+            event.save(update_fields=["status", "cancellation_reason", "updated_at"])
+            participants = Attendance.objects.filter(
+                event=event, status__in=[Attendance.STATUS_JOINED, Attendance.STATUS_ATTENDED]
+            )
+            for attendance in participants.only("user_id"):
+                send_attendance_notification.delay(attendance.user_id, event.pk, "org_cancelled")
+            return Response(EventDetailSerializer(event).data)
+
+        message = leave_event(request.user, event)
+        return Response({"message": message})
 
     @action(detail=False, methods=["get"], url_path="today", permission_classes=[IsAuthenticated])
     def today(self, request):

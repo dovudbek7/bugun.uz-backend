@@ -86,6 +86,7 @@ async def main():
         BotCommand(command="events", description="Qo'shilgan eventlar"),
         BotCommand(command="language", description="Tilni o'zgartirish"),
         BotCommand(command="referral", description="Referal havola olish"),
+        BotCommand(command="subscribe", description="Kategoriyalarga obuna bo'lish"),
         BotCommand(command="help", description="Yordam"),
     ])
 
