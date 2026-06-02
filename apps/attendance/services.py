@@ -40,6 +40,13 @@ def _maybe_schedule_reminder(user_id, event_pk):
             )
 
 
+def _check_waitlist_threshold(event_pk):
+    from apps.events.tasks import notify_organizer_waitlist_alert
+    count = WaitingList.objects.filter(event_id=event_pk).count()
+    if count > 0 and count % 3 == 0:
+        notify_organizer_waitlist_alert.delay(event_pk, count)
+
+
 def _check_milestone(event_pk):
     from apps.events.tasks import notify_organizer_milestone
     count = Attendance.objects.filter(
@@ -82,6 +89,7 @@ def join_event(user, event):
     WaitingList.objects.create(user=user, event=event)
     uid, eid = user.id, event.pk
     transaction.on_commit(lambda: _notify(uid, eid, "waiting"))
+    transaction.on_commit(lambda: _check_waitlist_threshold(eid))
     return "Added to waiting list"
 
 

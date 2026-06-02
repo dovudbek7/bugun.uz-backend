@@ -169,6 +169,10 @@ TEXTS = {
             "⚠️ <b>{title}</b> eventingizda <b>{count} ta</b> ishtirokchi bo'ldi!\n\n"
             "Tekshirib ko'ring."
         ),
+        "waitlist_capacity_alert": (
+            "⏳ <b>{title}</b> eventingizda <b>{count} kishi</b> kutmoqda!\n\n"
+            "Capacity oshirishni ko'rib chiqasizmi?"
+        ),
     },
     "ru": {
         "choose_language": "🌐 Выберите язык:",
@@ -284,6 +288,10 @@ TEXTS = {
             "⚠️ На ваше мероприятие <b>{title}</b> записалось <b>{count}</b> участников!\n\n"
             "Рекомендуем проверить."
         ),
+        "waitlist_capacity_alert": (
+            "⏳ На ваше мероприятие <b>{title}</b> ждут <b>{count} человек</b>!\n\n"
+            "Рассмотрите возможность увеличить вместимость."
+        ),
     },
     "en": {
         "choose_language": "🌐 Choose your language:",
@@ -398,6 +406,10 @@ TEXTS = {
         "event_milestone_warning": (
             "⚠️ Your event <b>{title}</b> now has <b>{count}</b> participants!\n\n"
             "Time to check in."
+        ),
+        "waitlist_capacity_alert": (
+            "⏳ <b>{count} people</b> are waiting for your event <b>{title}</b>!\n\n"
+            "Consider increasing the capacity."
         ),
     },
 }
