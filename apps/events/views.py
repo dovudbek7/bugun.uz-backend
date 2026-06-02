@@ -107,7 +107,7 @@ class EventViewSet(viewsets.ModelViewSet):
         request=inline_serializer("CancelRequest", fields={"reason": serializers.CharField(required=False, allow_blank=True)}),
         responses={200: OpenApiResponse(description="Cancelled successfully")},
     )
-    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["post", "patch"], url_path="cancel", permission_classes=[IsAuthenticated])
     def cancel(self, request, pk=None):
         event = self.get_object()
         is_owner = request.user.is_staff or event.organizer_id == request.user.id
