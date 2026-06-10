@@ -31,7 +31,8 @@ async def fetch_avatar_url(bot: Bot, user_id: int) -> str:
             buf.seek(0)
             filename = f"avatars/{uuid.uuid4().hex}.jpg"
             saved_path = await sync_to_async(default_storage.save)(filename, ContentFile(buf.read()))
-            return settings.MEDIA_URL + saved_path
+            # Build absolute, permanent URL so the frontend can render <img src> directly.
+            return f"{settings.PUBLIC_BASE_URL}/{settings.MEDIA_URL}{saved_path}"
     except Exception:
         logger.debug("Could not fetch avatar for user %s", user_id)
     return ""

@@ -95,6 +95,12 @@ def _save_phone_and_avatar(tg_id: int, phone: str, avatar: str):
 
 
 @sync_to_async
+def _save_avatar(tg_id: int, avatar: str):
+    if avatar:
+        User.objects.filter(telegram_id=tg_id).update(avatar=avatar)
+
+
+@sync_to_async
 def _get_user(tg_id: int):
     return User.objects.filter(telegram_id=tg_id).first()
 
@@ -117,13 +123,22 @@ def _apply_referral(new_user_id: int, referral_code: str) -> "User | None":
 # ── Handlers ───────────────────────────────────────────────────────────────────
 
 @router.message(CommandStart())
-async def start_handler(message: Message, command: CommandObject, state: FSMContext):
+async def start_handler(message: Message, command: CommandObject, state: FSMContext, bot):
     tg = message.from_user
     user, created = await _get_or_create_user(
         tg.id,
         tg.username or "",
         tg.full_name or "",
     )
+
+    # Download Telegram profile photo on /start and store a permanent URL.
+    # Telegram getFile URLs expire (~1h), so we fetch the bytes now and self-host.
+    # No photo → avatar stays "" (frontend treats empty as "no avatar").
+    if not user.avatar:
+        avatar_url = await fetch_avatar_url(bot, tg.id)
+        if avatar_url:
+            await _save_avatar(tg.id, avatar_url)
+            user.avatar = avatar_url
 
     if command.args and command.args.startswith("event_"):
         event_id = command.args.replace("event_", "")
@@ -195,7 +210,10 @@ async def contact_handler(message: Message, state: FSMContext, bot):
     lang = data.get("lang", "uz_latn")
     ref_code = data.get("ref_code")
 
-    avatar_url = await fetch_avatar_url(bot, message.from_user.id)
+    existing = await _get_user(message.from_user.id)
+    avatar_url = ""
+    if not (existing and existing.avatar):
+        avatar_url = await fetch_avatar_url(bot, message.from_user.id)
     await _save_phone_and_avatar(message.from_user.id, contact.phone_number, avatar_url)
     await state.clear()
 
