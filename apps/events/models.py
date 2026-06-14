@@ -13,11 +13,24 @@ class Event(models.Model):
         (STATUS_CANCELLED, "Cancelled"),
     )
 
+    TRANSLATION_PENDING = "pending"
+    TRANSLATION_DONE = "done"
+    TRANSLATION_FAILED = "failed"
+    TRANSLATION_STATUS_CHOICES = (
+        (TRANSLATION_PENDING, "Pending"),
+        (TRANSLATION_DONE, "Done"),
+        (TRANSLATION_FAILED, "Failed"),
+    )
+
     organizer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="organized_events")
     category = models.ForeignKey("categories.Category", on_delete=models.PROTECT, related_name="events")
     location = models.ForeignKey("locations.Location", on_delete=models.PROTECT, related_name="events")
     title = models.CharField(max_length=180)
-    description = models.TextField()
+    description = models.TextField()   # uz_latn (canonical; AI normalizes user input)
+    description_ru = models.TextField(blank=True)
+    description_en = models.TextField(blank=True)
+    translation_status = models.CharField(max_length=12, choices=TRANSLATION_STATUS_CHOICES, default=TRANSLATION_PENDING)
+    translated_at = models.DateTimeField(null=True, blank=True)
     image = models.ImageField(upload_to="events/", blank=True, null=True)
     event_date = models.DateField()
     event_time = models.TimeField()
@@ -57,6 +70,16 @@ class Event(models.Model):
     @property
     def waiting_count(self):
         return self.waiting_list.count()
+
+    def get_description(self, lang: str = "uz_latn") -> str:
+        from apps.telegram_bot.translations import latin_to_cyrillic
+        if lang == "uz_cyrl":
+            return latin_to_cyrillic(self.description)
+        if lang == "ru" and self.description_ru:
+            return self.description_ru
+        if lang == "en" and self.description_en:
+            return self.description_en
+        return self.description
 
     def __str__(self):
         return self.title

@@ -1,6 +1,8 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.common.lang import get_request_language
+
 from .models import Category
 
 
@@ -13,14 +15,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField())
     def get_name(self, obj):
-        request = self.context.get("request")
-        lang = "uz_latn"
-        if request:
-            lang = (
-                request.query_params.get("lang")
-                or (request.user.language if request.user.is_authenticated and hasattr(request.user, "language") else "uz_latn")
-            )
-        return obj.get_title(lang)
+        return obj.get_title(get_request_language(self.context.get("request")))
 
 
 class CategoryWriteSerializer(serializers.ModelSerializer):

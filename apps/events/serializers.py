@@ -3,6 +3,7 @@ from drf_spectacular.utils import extend_schema_field
 
 from apps.attendance.models import Attendance, WaitingList
 from apps.categories.serializers import CategorySerializer
+from apps.common.lang import get_request_language
 from apps.locations.serializers import LocationSerializer
 
 from .models import Event
@@ -28,6 +29,7 @@ class EventListSerializer(serializers.ModelSerializer):
     waiting_count = serializers.IntegerField(read_only=True)
     participants = serializers.SerializerMethodField()
     organizer = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -56,6 +58,10 @@ class EventListSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.DictField())
     def get_organizer(self, obj):
         return {"id": obj.organizer_id, "full_name": obj.organizer.full_name, "avatar": obj.organizer.avatar}
+
+    @extend_schema_field(serializers.CharField())
+    def get_description(self, obj):
+        return obj.get_description(get_request_language(self.context.get("request")))
 
 
 class EventDetailSerializer(EventListSerializer):
