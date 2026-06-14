@@ -10,6 +10,39 @@ from apps.common.telegram import send_telegram_message, send_telegram_venue
 from .models import Event
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def translate_event(self, event_id):
+    """Translate an event's description into uz_latn / ru / en via OpenAI.
+
+    The canonical ``description`` is overwritten with the uz_latn version so
+    Cyrillic can be generated from it. uz_cyrl is never stored.
+    """
+    from apps.common.ai_translate import translate_text
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        return
+    try:
+        result = translate_text(event.description)
+    except Exception as exc:
+        event.translation_status = Event.TRANSLATION_FAILED
+        event.save(update_fields=["translation_status", "updated_at"])
+        raise self.retry(exc=exc)
+
+    if not result:
+        return
+
+    event.description = result.get("uz_latn") or event.description
+    event.description_ru = result.get("ru", "")
+    event.description_en = result.get("en", "")
+    event.translation_status = Event.TRANSLATION_DONE
+    event.translated_at = timezone.now()
+    event.save(update_fields=[
+        "description", "description_ru", "description_en",
+        "translation_status", "translated_at", "updated_at",
+    ])
+
+
 @shared_task
 def send_event_notification(user_id, text):
     from django.contrib.auth import get_user_model

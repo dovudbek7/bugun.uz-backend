@@ -170,6 +170,10 @@ CORS_ALLOW_HEADERS = [
     "content-type",
 ]
 
+# OpenAI translation (key stored under CHATGPT_API_KEY in .env)
+OPENAI_API_KEY = os.environ.get("CHATGPT_API_KEY", "")
+OPENAI_TRANSLATE_MODEL = os.environ.get("OPENAI_TRANSLATE_MODEL", "gpt-4o-mini")
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
 MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
