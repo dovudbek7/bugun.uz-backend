@@ -11,7 +11,7 @@ from apps.attendance.models import Attendance, WaitingList
 from apps.attendance.services import join_event, leave_event, promote_all_waiting_users
 from apps.achievements.services import award_joined_achievements
 from apps.common.permissions import IsOrganizer, IsOrganizerOwnerOrReadOnly
-from apps.events.tasks import notify_category_subscribers, send_attendance_notification, send_event_notification, send_new_event_notification, translate_event
+from apps.events.tasks import notify_category_subscribers, send_attendance_notification, send_event_notification, send_new_event_notification
 
 from .models import Event
 from .serializers import (
@@ -98,8 +98,7 @@ class EventViewSet(viewsets.ModelViewSet):
         from apps.accounts.models import UserFollow
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        event = serializer.save()
-        translate_event.delay(event.pk)
+        event = serializer.save()  # post_save signal queues translation
         follower_ids = UserFollow.objects.filter(following=request.user).values_list("follower_id", flat=True)
         for fid in follower_ids:
             send_new_event_notification.delay(fid, event.pk)
@@ -110,16 +109,11 @@ class EventViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         event = self.get_object()
         old_seats = event.total_seats
-        old_description = event.description
         serializer = self.get_serializer(event, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        event = serializer.save()
+        event = serializer.save()  # post_save signal re-queues translation if description changed
         if event.total_seats > old_seats:
             promote_all_waiting_users(event)
-        if event.description != old_description:
-            event.translation_status = Event.TRANSLATION_PENDING
-            event.save(update_fields=["translation_status", "updated_at"])
-            translate_event.delay(event.pk)
         return Response({"message": "Event updated"})
 
     @extend_schema(summary="Delete (cancel) event", responses={200: _MSG_RESPONSE})
