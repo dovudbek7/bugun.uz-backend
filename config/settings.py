@@ -22,6 +22,8 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS",
     "http://127.0.0.1:8000/",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ).split(",")
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -163,11 +165,12 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = os.environ.get(
     "CORS_ALLOWED_ORIGINS",
     "https://bugunuz.vercel.app",
-).split(",")
+).split(",") + ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"]
 
 CORS_ALLOW_HEADERS = [
     "authorization",
     "content-type",
+    "accept-language",
 ]
 
 # OpenAI translation (key stored under CHATGPT_API_KEY in .env)

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.common.ai_translate import translate_text
+from apps.common.tasks import translate_taxonomy_obj
 
 from .models import Category
 
@@ -18,16 +18,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
     @admin.action(description="Re-translate selected (AI, ru/en)")
     def retranslate_selected(self, request, queryset):
-        done = failed = 0
+        count = 0
         for obj in queryset:
-            try:
-                result = translate_text(obj.title)
-            except Exception:  # noqa: BLE001
-                failed += 1
-                continue
-            if result:
-                obj.title_ru = result.get("ru", "")
-                obj.title_en = result.get("en", "")
-                obj.save(update_fields=["title_ru", "title_en"])
-                done += 1
-        self.message_user(request, f"Translated {done}, failed {failed}.")
+            translate_taxonomy_obj.delay("categories", "Category", obj.pk)
+            count += 1
+        self.message_user(request, f"Queued {count} category(ies) for re-translation.")
