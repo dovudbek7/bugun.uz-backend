@@ -165,11 +165,12 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = os.environ.get(
     "CORS_ALLOWED_ORIGINS",
     "https://bugunuz.vercel.app",
-).split(",")
+).split(",") + ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"]
 
 CORS_ALLOW_HEADERS = [
     "authorization",
     "content-type",
+    "accept-language",
 ]
 
 # OpenAI translation (key stored under CHATGPT_API_KEY in .env)
